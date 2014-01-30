@@ -20,9 +20,9 @@
 #include <linux/spinlock.h>
 #include <linux/delay.h>
 #if defined(CONFIG_LCD_KCAL)
-/* LGE_CHANGE_S
-* change code for LCD KCAL
-* 2013-05-08, seojin.lee@lge.com
+/*             
+                          
+                                
 */
 #include <mach/board_lge.h>
 extern int g_kcal_r;
@@ -98,9 +98,9 @@ struct mdp_csc_cfg dmb_csc_convert = {
 #elif defined(CONFIG_MACH_MSM8974_Z_KR) || defined(CONFIG_MACH_MSM8974_Z_US) || defined(CONFIG_MACH_MSM8974_Z_KDDI)
 	0,
 	{
-		0x0254, 0x0000, 0x0331,
-		0x0254, 0xff37, 0xfe60,
-		0x0254, 0x0409, 0x0000,
+		0x0258, 0x0000, 0x0331, //300
+		0x0262, 0xff37, 0xfe60, //305
+		0x0276, 0x0409, 0x0000, //315
 	},
 	{ 0xfff0, 0xff80, 0xff80,},
 	{ 0x0, 0x0, 0x0,},
@@ -130,7 +130,7 @@ struct mdp_csc_cfg dmb_csc_convert = {
 	{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
 #endif
 };
-#endif /* LGE_BROADCAST */
+#endif /*               */
 
 #if defined(CONFIG_LGE_BROADCAST_ONESEG)
 struct mdp_csc_cfg dmb_csc_convert = {
@@ -170,7 +170,7 @@ struct mdp_csc_cfg dmb_csc_convert = {
 	{ 0x0, 0xff, 0x0, 0xff, 0x0, 0xff,},
 #endif
 };
-#endif /* LGE_BROADCAST ONESEG */
+#endif /*                      */
 #define CSC_MV_OFF	0x0
 #define CSC_BV_OFF	0x2C
 #define CSC_LV_OFF	0x14
@@ -392,7 +392,7 @@ int pp_set_dmb_status(int flag) {
 	dmb_status = flag;
 	return 0;
 }
-#endif /* LGE_BROADCAST */
+#endif /*               */
 
 static void pp_hist_read(char __iomem *v_base,
 				struct pp_hist_col_info *hist_info);
@@ -708,7 +708,7 @@ static int pp_vig_pipe_setup(struct mdss_mdp_pipe *pipe, u32 *op)
 			} else {
 				mdss_mdp_csc_setup(MDSS_MDP_BLOCK_SSPP, pipe->num, 1, MDSS_MDP_CSC_YUV2RGB);
 			}
-#endif /* LGE_BROADCAST */
+#endif /*               */
 		}
 	}
 
@@ -848,7 +848,11 @@ static int mdss_mdp_scale_setup(struct mdss_mdp_pipe *pipe)
 			if (src_h <= pipe->dst.h)
 				scale_config |= /* RGB, A */
 					(MDSS_MDP_SCALE_FILTER_BIL << 10) |
+#if defined(CONFIG_MACH_MSM8974_VU3_KR)
+					(MDSS_MDP_SCALE_FILTER_BIL << 18);
+#else
 					(MDSS_MDP_SCALE_FILTER_NEAREST << 18);
+#endif
 			else
 				scale_config |= /* RGB, A */
 					(MDSS_MDP_SCALE_FILTER_PCMN << 10) |
@@ -901,7 +905,11 @@ static int mdss_mdp_scale_setup(struct mdss_mdp_pipe *pipe)
 			if (src_w <= pipe->dst.w)
 				scale_config |= /* RGB, A */
 					(MDSS_MDP_SCALE_FILTER_BIL << 8) |
+#if defined(CONFIG_MACH_MSM8974_VU3_KR)
+					(MDSS_MDP_SCALE_FILTER_BIL << 16);
+#else
 					(MDSS_MDP_SCALE_FILTER_NEAREST << 16);
+#endif
 			else
 				scale_config |= /* RGB, A */
 					(MDSS_MDP_SCALE_FILTER_PCMN << 8) |
@@ -1592,9 +1600,9 @@ int mdss_mdp_pp_init(struct device *dev)
 		}
 	}
 #if defined(CONFIG_LCD_KCAL)
-/* LGE_CHANGE_S
-* change code for LCD KCAL
-* 2013-05-08, seojin.lee@lge.com
+/*             
+                          
+                                
 */
 	if (!ret) {
 		mdss_mdp_pp_argc();

@@ -30,6 +30,7 @@
 #include <linux/kernel.h>
 #include <linux/workqueue.h>
 //#include <linux/debugfs.h>
+#include <mach/clk.h> /*                                                                            */
 #endif
 /* LGE_CHANGE_E, add the dual isp patch code from QCT, 2013.6.20, youngil.yun[End] */
 #include <mach/iommu_domains.h>
@@ -663,6 +664,38 @@ static int cpp_init_hardware(struct cpp_device *cpp_dev)
 		}
 	}
 
+/*                                                                              */
+	 cpp_dev->cpp_clk[7] = clk_get(&cpp_dev->pdev->dev, 
+	 cpp_clk_info[7].clk_name); 
+
+	 if (IS_ERR(cpp_dev->cpp_clk[7])) { 
+		 pr_err("%s get failed\n", cpp_clk_info[7].clk_name); 
+		 rc = PTR_ERR(cpp_dev->cpp_clk[7]); 
+		 goto remap_failed; 
+	 } 
+	 
+	 rc = clk_reset(cpp_dev->cpp_clk[7], CLK_RESET_ASSERT); 
+	 
+	 if (rc) { 
+		 pr_err("%s:micro_iface_clk assert failed\n", __func__); 
+		 clk_put(cpp_dev->cpp_clk[7]); 
+		 goto remap_failed; 
+	 } 
+	 
+	 usleep_range(10000, 12000); 
+	 
+	 rc = clk_reset(cpp_dev->cpp_clk[7], CLK_RESET_DEASSERT); 
+	 if (rc) { 
+		 pr_err("%s:micro_iface_clk assert failed\n", __func__); 
+		 clk_put(cpp_dev->cpp_clk[7]); 
+		 goto remap_failed; 
+	 } 
+	 
+	 usleep_range(1000, 1200); 
+	 
+	 clk_put(cpp_dev->cpp_clk[7]); 
+/*                                                                              */
+
 	rc = msm_cam_clk_enable(&cpp_dev->pdev->dev, cpp_clk_info,
 			cpp_dev->cpp_clk, ARRAY_SIZE(cpp_clk_info), 1);
 	if (rc < 0) {
@@ -1077,13 +1110,15 @@ static int msm_cpp_dump_frame_cmd(uint32_t *cmd, int32_t len)
 }
 #endif
 
-/*                                                                                   */
+/*                                                                          */
 #ifdef CONFIG_USE_DUAL_ISP
+/*                                                                     */
 #if 0
 void msm_cpp_do_timeout_work(struct work_struct *work)
 #else
 static void msm_cpp_do_timeout_work(struct work_struct *work)
 #endif
+/*                                                                     */
 {
 	int ret;
 	uint32_t i = 0;
@@ -1093,11 +1128,13 @@ static void msm_cpp_do_timeout_work(struct work_struct *work)
 
 	pr_err("cpp_timer_callback called idx:%d. (jiffies=%lu)\n",
 		del_timer_idx, jiffies);
+/*                                                                     */
 	if (!work || !this_frame) {
 		pr_err("Invalid work:%p, this_frame:%p, del_idx:%d\n",
 			work, this_frame, del_timer_idx);
 		return;
 	}
+/*                                                                     */
 	pr_err("fatal: cpp_timer expired for identity=0x%x, frame_id=%03d",
 		this_frame->identity, this_frame->frame_id);
 	cpp_timers[del_timer_idx].used = 0;

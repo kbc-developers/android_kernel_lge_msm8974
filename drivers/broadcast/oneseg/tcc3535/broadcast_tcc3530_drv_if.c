@@ -22,33 +22,9 @@
 #include "broadcast_dmb_typedef.h"
 #include "broadcast_dmb_drv_ifdef.h"
 
-/*                                 */
-/*                                         */
+/*#define _DISPLAY_MONITOR_DBG_LOG_*/
+/*#define _USE_ONSEG_SIGINFO_MODIFIED_MODE_*/
 #define _USE_MONITORING_TIME_GAP_
-
-#define _1_SEG_FIFO_THR_	(188*16) /*                                                                */
-//                                                                                                         
-#define _13_SEG_FIFO_THR_	(188*80) /*                                                                  */
-//                                                                                                          
-
-#ifdef _MODEL_F9J_
-#define MMB_EAR_ANTENNA
-#ifdef MMB_EAR_ANTENNA
-#define ISDBT_DEFAULT_NOTUSE_MODE -1
-#define ISDBT_UHF_MODE 0
-#define ISDBT_VHF_MODE 1
-
-#define ISDBT_DEFAULT_RETRACTABLE_MODE 0
-#define ISDBT_AUTO_ATENNA_SWITCHING_MODE 1
-#endif
-#endif
-
-/*
-                                    
-                           
-                           
-                           
-*/
 
 typedef enum {
 	TMM_13SEG = 0,

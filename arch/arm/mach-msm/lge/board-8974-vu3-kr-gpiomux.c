@@ -2092,7 +2092,6 @@ static struct msm_gpiomux_config wlc_charger_configs[] __initdata = {
 	},
 };
 #endif
-/*                                                         */
 
 #if defined(CONFIG_USB_LGE_USB3_REDRIVER)
 static struct gpiomux_setting usb3_rd_en_cfg = {
@@ -2281,13 +2280,10 @@ if (socinfo_get_version() >= 0x20000) {
 	msm_gpiomux_install(msm8974_nfc_configs, ARRAY_SIZE(msm8974_nfc_configs));
 #endif
 
-/*                                                         */
 #ifdef CONFIG_WIRELESS_CHARGER
 	msm_gpiomux_install(wlc_charger_configs,
 				ARRAY_SIZE(wlc_charger_configs));
 #endif
-
-/*                                                         */
 
 /*             
                         

@@ -170,12 +170,6 @@ static struct gpiomux_setting snfc_hvdd_cfg = {
     .pull = GPIOMUX_PULL_NONE,
     .dir = GPIOMUX_OUT_LOW,
 };
-static struct gpiomux_setting snfc_uicc_cfg = {
-    .func = GPIOMUX_FUNC_GPIO,
-    .drv = GPIOMUX_DRV_2MA,
-    .pull = GPIOMUX_PULL_NONE,
-    .dir = GPIOMUX_OUT_HIGH,
-};
 #endif
 static struct gpiomux_setting gpio_uart_config = {
 	.func = GPIOMUX_FUNC_2,
@@ -1011,13 +1005,6 @@ static struct msm_gpiomux_config msm8974_nfc_configs_revc[] __initdata ={
 			.settings = {
 				[GPIOMUX_SUSPENDED] = &snfc_hvdd_cfg,
 			},
-		},
-		/* NFC UICC_VCC_CONTROL */
-		{
-			.gpio = 25,
-			.settings = {
-				[GPIOMUX_SUSPENDED] = &snfc_uicc_cfg,
-			},
 		},	
 };	
 static struct msm_gpiomux_config msm8974_nfc_configs_revb[] __initdata ={
@@ -1072,14 +1059,7 @@ static struct msm_gpiomux_config msm8974_nfc_configs_revb[] __initdata ={
 			.settings = {
 				[GPIOMUX_SUSPENDED] = &snfc_hvdd_cfg,
 			},
-		},
-		/* NFC UICC_VCC_CONTROL */
-		{
-			.gpio = 25,
-			.settings = {
-				[GPIOMUX_SUSPENDED] = &snfc_uicc_cfg,
-			},
-		},		
+		},	
 };	
 #endif
 

@@ -141,6 +141,35 @@ static int mdss_dsi_regulator_init(struct platform_device *pdev)
 }
 
 #if defined(CONFIG_OLED_SUPPORT)
+int mdss_dsi_lane_config(struct mdss_panel_data *pdata, int enable)
+{
+	u32 tmp;
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
+
+	if (pdata == NULL) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return -EINVAL;
+	}
+
+	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
+				panel_data);
+
+	tmp = MIPI_INP((ctrl_pdata->ctrl_base) + 0xac);
+	pr_info("%s+: dsi_lane_ctrl=0x%x\n", __func__, tmp);
+	if (enable) {
+		tmp |= DSI_LANE_CTRL_HS_MASK;
+		MIPI_OUTP((ctrl_pdata->ctrl_base) + 0xac, tmp);
+		wmb();
+	} else {
+		tmp &= DSI_LANE_CTRL_LP_MASK;
+		MIPI_OUTP((ctrl_pdata->ctrl_base) + 0xac, tmp);
+		wmb();
+	}
+	pr_info("%s-: current mode=%s dsi_lane_ctrl=0x%x\n", __func__, (enable ? "hs" : "lp"), tmp);
+	return 0;
+}
+EXPORT_SYMBOL(mdss_dsi_lane_config);
+
 int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata, int enable)
 {
 	int ret;
@@ -386,10 +415,10 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata, int enable)
 			}
 		}
 #if defined(CONFIG_MACH_LGE)
-		/* LGE_CHANGE_S
-		 * power sequence for LGD_FHD panel
-		 * 2013-04-05, yeonjun.kim@lge.com
-		 */
+		/*             
+                                     
+                                    
+   */
 		if (gpio_is_valid(ctrl_pdata->disp_en_gpio)){
 			gpio_set_value((ctrl_pdata->disp_en_gpio), 1);
 			msleep(1);
@@ -400,14 +429,14 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata, int enable)
 #else
 		if (pdata->panel_info.panel_power_on == 0)
 			mdss_dsi_panel_reset(pdata, 1);
-		/* LGE_CHANGE_E */
+		/*              */
 #endif
 	} else {
 #if !defined(CONFIG_MACH_LGE)
-		/* LGE_CHANGE_S
-		 * power sequence for LGD_FHD panel
-		 * 2013-04-05, yeonjun.kim@lge.com
-		 */
+		/*             
+                                     
+                                    
+   */
 		mdss_dsi_panel_reset(pdata, 0);
 #endif
 		if (ctrl_pdata->power_data.num_vreg > 0) {
@@ -449,10 +478,10 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata, int enable)
 			}
 
 #if defined(CONFIG_MACH_LGE)
-			/* LGE_CHANGE_S
-			 * power sequence for LGD_FHD panel
-			 * 2013-04-09, yeonjun.kim@lge.com
-			 */
+			/*             
+                                      
+                                     
+    */
 			msleep(1);
 			mdss_dsi_panel_reset(pdata, 0);
 			msleep(1);
@@ -838,10 +867,10 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 	mdss_dsi_panel_reset(pdata, 1);
 	msleep(20);
 #else
-	/* LGE_CHANGE_S
-	 * power sequence for LGD_FHD panel
-	 * 2013-04-05, yeonjun.kim@lge.com
-	 */
+	/*             
+                                    
+                                   
+  */
 	#if defined (CONFIG_MACH_MSM8974_VU3_KR)
 		msleep(40);
 	#else
@@ -958,7 +987,7 @@ int mdss_dsi_cont_splash_on(struct mdss_panel_data *pdata)
 	pr_debug("%s+: ctrl=%p ndx=%d\n", __func__,
 				ctrl_pdata, ctrl_pdata->ndx);
 
-	/* LGE_CHANGE, command panel does not be powered off */
+	/*                                                   */
 	if (pdata->panel_info.type == MIPI_VIDEO_PANEL)
 		WARN((ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT),
 				"Incorrect Ctrl state=0x%x\n", ctrl_pdata->ctrl_state);
@@ -1037,16 +1066,6 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 			rc = -EINVAL;
 		}
 		break;
-#ifdef CONFIG_OLED_SUPPORT
-	case MDSS_EVENT_FIRST_FRAME_UPDATE:
-              /*Event is send only if cont_splash feature is enabled */
-		if (ctrl_pdata->off_cmds.link_state == DSI_HS_MODE) {
-			/* Panel is Enabled already in Bootloader */
-			ctrl_pdata->ctrl_state |= CTRL_STATE_PANEL_INIT;
-			rc = mdss_dsi_blank(pdata);
-		}
-		break;
-#endif
 	case MDSS_EVENT_PANEL_CLK_CTRL:
 		mdss_dsi_clk_req(ctrl_pdata, (int)arg);
 		break;

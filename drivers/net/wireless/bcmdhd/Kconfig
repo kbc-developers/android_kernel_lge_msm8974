@@ -72,4 +72,3 @@ config BCM4335BT
        default y
        ---help---
          This is a configuration for bt lock enable.
-

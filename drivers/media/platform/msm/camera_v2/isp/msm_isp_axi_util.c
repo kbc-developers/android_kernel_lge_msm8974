@@ -360,9 +360,11 @@ void msm_isp_sof_notify(struct vfe_device *vfe_dev,
 		if (vfe_dev->axi_data.src_info[VFE_PIX_0].frame_id == 0)
 			vfe_dev->axi_data.src_info[VFE_PIX_0].frame_id = 1;
 
+/*                                                                  */
 		if(vfe_dev->axi_data.src_info[VFE_PIX_0].frame_id < 10)
 		pr_err("%s: PIX0 frame id: %lu\n", __func__,
 			vfe_dev->axi_data.src_info[VFE_PIX_0].frame_id);
+/*                                                                  */
 		break;
 	case VFE_RAW_0:
 	case VFE_RAW_1:

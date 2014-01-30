@@ -192,6 +192,13 @@ config MACH_MSM8974_Z_ATT_US
 	help
 	  Support for the Qualcomm MSM8974 Z ATT device.
 
+config MACH_MSM8974_Z_OPEN_COM
+	depends on ARCH_MSM8974
+	select MACH_LGE
+	bool "MSM8974 Z OPEN COM"
+	help
+	  Support for the Qualcomm MSM8974 Z ATT device.
+
 config MACH_MSM8974_VU3_KR
 	depends on ARCH_MSM8974
 	select MACH_LGE

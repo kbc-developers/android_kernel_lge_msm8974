@@ -53,9 +53,9 @@ static struct dsi_panel_cmds lge_ief_off_cmds;
 #endif
 
 #ifdef CONFIG_LGE_LCD_TUNING
-/* LGE_CHANGE_S
- * Add code to apply tuning method for LCD
- * 2012-12-03, minjong.gong@lge.com
+/*             
+                                          
+                                   
 */
 extern int num_cmds;
 extern int tun_len;
@@ -69,7 +69,7 @@ static int num_of_on_cmds;
 static int num_of_off_cmds;
 static char *on_cmds, *off_cmds;
 
-#endif /* CONFIG_LGE_LCD_TUNING */
+#endif /*                       */
 
 DEFINE_LED_TRIGGER(bl_led_trigger);
 
@@ -145,7 +145,7 @@ static ssize_t panel_maker_id_show(struct device *dev,
 static DEVICE_ATTR(panel_maker_id, 0444, panel_maker_id_show, NULL);
 #endif
 
-#if defined(CONFIG_OLED_SUPPORT) && defined(CONFIG_LGE_OLED_IMG_TUNING)
+#if defined(CONFIG_LGE_SUPORT_OLED_TUNING)
 #include "mdss_mdp.h"
 #define	IMG_TUNE_COUNT	6
 static int img_tune_mode = 1;	// Default value : cm0(standard) + plc 60%
@@ -317,10 +317,10 @@ void mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 				panel_data);
 
 #ifndef CONFIG_MACH_LGE
-		/* LGE_CHANGE_S
-		 * power sequence for LGD_FHD panel
-		 * 2013-04-05, yeonjun.kim@lge.com
-		 */
+		/*             
+                                     
+                                    
+   */
 	if (!gpio_is_valid(ctrl_pdata->disp_en_gpio)) {
 		pr_debug("%s:%d, reset line not configured\n",
 			   __func__, __LINE__);
@@ -366,10 +366,10 @@ void mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 	} else {
 		gpio_set_value((ctrl_pdata->rst_gpio), 0);
 #ifndef CONFIG_MACH_LGE
-		/* LGE_CHANGE_S
-		 * power sequence for LGD_FHD panel
-		 * 2013-04-05, yeonjun.kim@lge.com
-		 */
+		/*             
+                                     
+                                    
+   */
 		if (gpio_is_valid(ctrl_pdata->disp_en_gpio))
 			gpio_set_value((ctrl_pdata->disp_en_gpio), 0);
 #endif
@@ -447,10 +447,10 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 
 	if (ctrl->on_cmds.cmd_cnt)
 #ifdef CONFIG_LGE_LCD_TUNING
-		/* LGE_CHANGE
-		 * Implement for LCD init sequence tuning
-		 * 2013-01-25, baryun.hwang@lge.com
-		 */
+		/*           
+                                           
+                                     
+   */
 		mdss_dsi_cmds_tx(pdata, &dsi_panel_tx_buf,
 				tun_dsi_panel_on_cmds,
 				num_of_on_cmds);
@@ -577,7 +577,7 @@ static ssize_t ief_on_off(struct device *dev,
 DEVICE_ATTR(ief_on_off, 0644, NULL, ief_on_off);
 #endif
 
-#if defined(CONFIG_OLED_SUPPORT) && defined(CONFIG_LGE_OLED_IMG_TUNING)
+#if defined(CONFIG_LGE_SUPORT_OLED_TUNING)
 int mdss_dsi_panel_img_tune_apply(unsigned int screen_mode)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl = NULL;
@@ -603,11 +603,16 @@ int mdss_dsi_panel_img_tune_apply(unsigned int screen_mode)
 		return -EINVAL;
 	}
 	
-	if (screen_mode == IMG_TUNE_COUNT) {
-		pr_info("%s: send the screen mode on(%d) from kernel.\n", __func__, img_tune_mode);
+	if ((lge_get_boot_mode() == LGE_BOOT_MODE_FACTORY) || (lge_get_boot_mode() == LGE_BOOT_MODE_FACTORY2)) {
+		img_tune_mode = 0;
+		pr_info("%s: send the screen mode on(%d) in ftm boot.\n", __func__, img_tune_mode);
 	} else {
-		img_tune_mode = screen_mode;
-		pr_info("%s: send the screen mode on(%d) from user.\n", __func__, img_tune_mode);
+		if (screen_mode == IMG_TUNE_COUNT) {
+			pr_info("%s: send the screen mode on(%d) from kernel.\n", __func__, img_tune_mode);
+		} else {
+			img_tune_mode = screen_mode;
+			pr_info("%s: send the screen mode on(%d) from user.\n", __func__, img_tune_mode);
+		}
 	}
 
 	if(img_tune_cmds_set->img_tune_cmds[img_tune_mode].cmd_cnt) {
@@ -764,10 +769,10 @@ static int mdss_dsi_parse_dcs_cmds(struct device_node *np,
 }
 
 #if defined(CONFIG_MACH_LGE)
-/* G2-Task-LCD@lge.com
- * In the normal case, when the device turnned off, lcd off function doesn't work.
- * But, It's need to turn off the panel device in order to prevent flicking issue.
- * So, Add lcd turn off function when the device shut down.
+/*                    
+                                                                                  
+                                                                                  
+                                                           
  */
 static void mdss_dsi_panel_shutdown(void)
 {
@@ -1169,7 +1174,7 @@ static int mdss_panel_parse_dt(struct platform_device *pdev,
 #endif
 
 
-#if defined(CONFIG_OLED_SUPPORT) && defined(CONFIG_LGE_OLED_IMG_TUNING)
+#if defined(CONFIG_LGE_SUPORT_OLED_TUNING)
 	img_tune_cmds_set = kzalloc(sizeof(struct img_tune_cmds_desc), GFP_KERNEL);
 	for(i = 0; i < IMG_TUNE_COUNT; i++)
 		mdss_dsi_parse_dcs_cmds(np, &img_tune_cmds_set->img_tune_cmds[i],
@@ -1193,10 +1198,20 @@ static int __devinit mdss_dsi_panel_probe(struct platform_device *pdev)
 	static struct mdss_panel_common_pdata vendor_pdata;
 	static const char *panel_name;
 
-#ifdef CONFIG_LGE_SUPPORT_LCD_MAKER_ID
+#if defined(CONFIG_LGE_SUPPORT_LCD_MAKER_ID) || defined(CONFIG_LGE_SUPORT_OLED_TUNING)
 	struct class *panel;
-	struct device *panel_sysfs_dev;
+
+#if defined(CONFIG_LGE_SUPPORT_LCD_MAKER_ID)
+	struct device *panel_lcd_sysfs_dev;
 #endif
+#if defined(CONFIG_LGE_SUPORT_OLED_TUNING)
+	struct device *panel_oled_sysfs_dev;
+#endif
+	panel = class_create(THIS_MODULE, "panel");
+	if (IS_ERR(panel))
+		pr_err("%s : Failed to create class(panel)!", __func__);
+#endif
+
 	pr_debug("%s:%d, debug info id=%d", __func__, __LINE__, pdev->id);
 	if (!pdev->dev.of_node)
 		return -ENODEV;
@@ -1223,33 +1238,39 @@ static int __devinit mdss_dsi_panel_probe(struct platform_device *pdev)
 	if (rc)
 		return rc;
 
-#ifdef CONFIG_LGE_SUPPORT_LCD_MAKER_ID
-	panel = class_create(THIS_MODULE, "panel");
-	if (IS_ERR(panel))
-	    pr_err("%s : Failed to create class(panel)!", __func__);
-
-	panel_sysfs_dev = device_create(panel, NULL, 0, NULL, "panel_info");
-	if (IS_ERR(panel_sysfs_dev))
+#if defined(CONFIG_LGE_SUPPORT_LCD_MAKER_ID)
+	panel_lcd_sysfs_dev = device_create(panel, NULL, 0, NULL, "panel_info");
+	if (IS_ERR(panel_lcd_sysfs_dev))
 	{
-	    pr_err("%s : Failed to create dev(panel_sysfs_dev)!", __func__);
+	    pr_err("%s : Failed to create dev(panel_lcd_sysfs_dev)!", __func__);
 	}
 	else
 	{
-		if (device_create_file(panel_sysfs_dev, &dev_attr_panel_maker_id) < 0)
+		if (device_create_file(panel_lcd_sysfs_dev, &dev_attr_panel_maker_id) < 0)
 		    pr_err("%s : Failed to create device file(%s)!",
 					   __func__, dev_attr_panel_maker_id.attr.name);
 	}
 #endif
 
-#if defined(CONFIG_OLED_SUPPORT) && defined(CONFIG_LGE_OLED_IMG_TUNING)
-    rc = device_create_file(&pdev->dev,&panel_tuning_device_attrs[0]);
-	if(rc) pr_err("%s: device file(img_tune_mode) create fail!\n",__func__);
-    rc = device_create_file(&pdev->dev,&panel_tuning_device_attrs[1]);
-	if(rc) pr_err("%s: device file(bl_tune_mode) create fail!\n",__func__);
-    rc = device_create_file(&pdev->dev,&panel_tuning_device_attrs[2]);
-	if(rc) pr_err("%s: device file(mipi_dsi_read) create fail!\n",__func__);
+#if defined(CONFIG_LGE_SUPORT_OLED_TUNING)
+	panel_oled_sysfs_dev = device_create(panel, NULL, 0, NULL, "oled");
+	if (IS_ERR(panel_oled_sysfs_dev))
+	{
+	    pr_err("%s : Failed to create dev(panel_oled_sysfs_dev)!", __func__);
+	}
+	else
+	{
+		if (device_create_file(panel_oled_sysfs_dev, &panel_tuning_device_attrs[0]) < 0)
+		    pr_err("%s: device file(%s) create fail!\n",
+					   __func__, panel_tuning_device_attrs[0].attr.name);
+		if (device_create_file(panel_oled_sysfs_dev, &panel_tuning_device_attrs[1]) < 0)
+		    pr_err("%s: device file(%s) create fail!\n",
+					   __func__, panel_tuning_device_attrs[1].attr.name);
+		if (device_create_file(panel_oled_sysfs_dev, &panel_tuning_device_attrs[2]) < 0)
+		    pr_err("%s: device file(%s) create fail!\n",
+					   __func__, panel_tuning_device_attrs[2].attr.name);
+	}
 #endif
-
 
 #if defined(CONFIG_MACH_LGE) && !(defined(CONFIG_MACH_MSM8974_Z_KR) || defined(CONFIG_MACH_MSM8974_Z_US) || defined(CONFIG_MACH_MSM8974_Z_KDDI))
 	rc = device_create_file(&pdev->dev, &dev_attr_ief_on_off);

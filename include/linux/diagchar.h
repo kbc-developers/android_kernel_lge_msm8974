@@ -29,11 +29,11 @@
 #define CALLBACK_MODE			6
 #define MEMORY_DEVICE_MODE_NRT		7
 
-//2013-03-06 seongmook.yim(seongmook.yim@lge.com) [P6/MDMBSP] ADD LGODL [START]
+//                                                                             
 #ifdef CONFIG_LGE_DM_DEV
 #define DM_DEV_MODE         20
 #endif
-//2013-03-06 seongmook.yim(seongmook.yim@lge.com) [P6/MDMBSP] ADD LGODL [END]
+//                                                                           
 
 #ifdef CONFIG_LGE_DM_APP
 #define DM_APP_MODE			10

@@ -200,6 +200,7 @@ static int vzw_chg_present = NOT_PRESENT;
 #define IS_OPEN_TA 0
 #define IS_USB_DRIVER_UNINSTALLED 1
 #define IS_USB_DRIVER_INSTALLED   2
+#define IS_USB_CHARGING_ENABLE    3
 
 static int usb_chg_state = IS_USB_DRIVER_INSTALLED;
 #ifdef CONFIG_VZW_LLK
@@ -316,17 +317,12 @@ static void smb349_bb_worker_trigger(struct smb349_struct *smb349_chg,
 		smb349_bb_param param);
 #endif
 
-#ifdef CONFIG_SMB349_VZW_FAST_CHG
-#if SMB349_BOOSTBACK_WORKAROUND
-static int count_no_aicl = 0;
-#endif
-#endif
 #ifdef CONFIG_WIRELESS_CHARGER
 static int wireless_charging;
 #endif
 
 #ifdef CONFIG_MAX17050_FUELGAUGE
-/*junnyoung.jang@lge.com 20130326 Add battery condition */
+/*                                                      */
 static int g_batt_soc;
 static int g_batt_vol;
 static int g_batt_age;
@@ -615,7 +611,7 @@ static bool smb349_is_charger_present_rt(struct i2c_client *client)
 
 	if (!smb349_chg) {
 		pr_err("failed that smb349_chg is not yet initialized\n");
-		goto rt_error;
+		return false;
 	}
 
 	/* uses under voltage status bit to detect cable plug or unplug */
@@ -755,6 +751,10 @@ static int smb349_get_prop_charge_type(struct smb349_struct *smb349_chg)
 		wake_lock_timeout(&smb349_chg->uevent_wake_lock, HZ*2);
 		if (status == SMB_CHG_STATUS_NONE) {
 			pr_debug("Charging stopped.\n");
+			#ifdef CONFIG_BQ51053B_CHARGER
+			if(smb349_chg->wlc_present && (status_c & BIT(5)))
+				wireless_charging_completed();
+			#endif
 			wake_unlock(&smb349_chg->chg_wake_lock);
 		} else {
 			pr_debug("Charging started.\n");
@@ -850,7 +850,7 @@ static int get_prop_batt_voltage_now_max17048(void)
 }
 
 #ifdef CONFIG_MAX17050_FUELGAUGE
-/*junnyoung.jang@lge.com 20130326 Add battery condition */
+/*                                                      */
 void lge_pm_battery_age_update(void)
 {
 	if (pseudo_batt_age_mode)
@@ -986,7 +986,7 @@ static int smb349_get_prop_batt_health(struct smb349_struct *smb349_chg)
 	int batt_temp;
 	batt_temp = smb349_get_prop_batt_temp(smb349_chg);
 
-	/* TODO : implements LGE charing scenario */
+	/*                                        */
 	if (batt_temp >= 550)
 		return POWER_SUPPLY_HEALTH_OVERHEAT;
 	if (batt_temp <= -100)
@@ -1802,10 +1802,10 @@ static int check_fuel_gauage_update_data(void)
  */
 static void vzw_fast_chg_change_state(struct smb349_struct *smb349_chg, u8 val)
 {
-	if (val < 0x07) {
+	if (val < 0x06) {
 		chg_state = VZW_UNDER_CURRENT_CHARGING;
 		pr_info("VZW_UNDER_CURRENT_CHARGING : 0x%x\n", val);
-	} else if (val >= 0x07) {
+	} else if (val >= 0x06) {
 		chg_state = VZW_NORMAL_CHARGING;
 		pr_info("VZW_NORMAL_CHARGING : 0x%x\n", val);
 	}
@@ -1882,7 +1882,7 @@ static void max17050_soc(struct work_struct *work)
  */
 static int vzw_fast_chg_detect_incompatible_charger(struct i2c_client *client)
 {
-	int ret, count = 0, threshold= 4400000, hw_rev = 0;
+	int ret, count = 0, threshold= 4200000, hw_rev = 0;
 
 #ifdef CONFIG_MACH_MSM8974_G2_VZW
 	if(lge_get_board_revno() >= HW_REV_E) {
@@ -2346,16 +2346,10 @@ static void smb349_irq_worker(struct work_struct *work)
 				smb349_aicl_result(val), val);
 #endif
 #ifdef CONFIG_SMB349_VZW_FAST_CHG
-		if (!(vzw_chg_present == USB_PRESENT))
+		if ((!(vzw_chg_present == USB_PRESENT)) && (chg_state == VZW_NO_CHARGER))
 			vzw_fast_chg_change_state(smb349_chg, val);
-	}
-#if SMB349_BOOSTBACK_WORKAROUND
-	else if (vzw_chg_present == UNKNOWN_PRESENT)
-		count_no_aicl += 1;
 #endif
-#else
 	}
-#endif
 
 	if ( !(irqstat[IRQSTAT_E] & 0x01) ) {
 #if SMB349_BOOSTBACK_WORKAROUND
@@ -2483,7 +2477,7 @@ static enum power_supply_property smb349_batt_power_props[] = {
 	POWER_SUPPLY_PROP_PSEUDO_BATT,
 	POWER_SUPPLY_PROP_EXT_PWR_CHECK,
 #ifdef CONFIG_MAX17050_FUELGAUGE
-/*junnyoung.jang@lge.com 20130326 Add battery condition */
+/*                                                      */
 	POWER_SUPPLY_PROP_BATTERY_CONDITION,
 	POWER_SUPPLY_PROP_BATTERY_AGE,
 #endif
@@ -3321,9 +3315,28 @@ EXPORT_SYMBOL(set_vzw_usb_charging_state);
 
 static void vzw_fast_chg_change_usb_charging_state(struct smb349_struct *smb349_chg)
 {
+	struct usb_phy *otg_xceiv;
+	struct dwc3_otg *dotg;
+
 	chg_state = VZW_NO_CHARGER;
 
-	if(!slimport_is_connected()) {
+	otg_xceiv = usb_get_transceiver();
+	if (!otg_xceiv) {
+		pr_err("Failed to get usb transceiver.\n");
+		return;
+	}
+
+	dotg = container_of(otg_xceiv->otg, struct dwc3_otg, otg);
+	if (!dotg) {
+		pr_err("Failed to get otg driver data.\n");
+		return;
+	}
+
+	if (dotg->charger->chg_type == DWC3_CDP_CHARGER) {
+		smb349_set_usb_5_1_mode(smb349_chg, 1);
+		smb349_usb_hc_mode(smb349_chg, USB_HC_MODE_BIT);
+		pr_info("CDP CHARGER is connected!\n");
+	} else if(!slimport_is_connected()) {
 		if(lge_usb_config_finish == 0) {
 			smb349_enable_charging(smb349_chg, false);
 			pr_info("USB cable is connected, but USB is not configured!\n");
@@ -3331,6 +3344,7 @@ static void vzw_fast_chg_change_usb_charging_state(struct smb349_struct *smb349_
 			smb349_set_usb_5_1_mode(smb349_chg, 1);
 			smb349_enable_charging(smb349_chg, true);
 			pr_info("USB is configured and USB Driver is installed!\n");
+			usb_chg_state = IS_USB_CHARGING_ENABLE;
 #if SMB349_BOOSTBACK_WORKAROUND
 			if (smb349_chg->is_bb_work_case)
 				smb349_usb_hc_mode(smb349_chg, USB_HC_MODE_BIT);
@@ -3373,24 +3387,10 @@ static void vzw_fast_chg_set_charging(struct smb349_struct *smb349_chg)
 	} else if (vzw_chg_present == INCOMPAT_PRESENT){
 		chg_state = VZW_NOT_CHARGING;
 		pr_info("chg_state 1 = %d\n", chg_state);
-#if SMB349_BOOSTBACK_WORKAROUND
-	} else if ((vzw_chg_present == UNKNOWN_PRESENT) && count_no_aicl == 2) {
-#else
-	} else if (vzw_chg_present == UNKNOWN_PRESENT) {
-#endif
-		smb349_usb_hc_mode(smb349_chg, 0);
-		smb349_set_usb_5_1_mode(smb349_chg, 1);
-		smb349_set_usb_2_3_mode(smb349_chg, false);
-		smb349_enable_charging(smb349_chg, true);
-		chg_state = VZW_UNDER_CURRENT_CHARGING;
-		pr_info("chg_state 2 = %d\n", chg_state);
+
 	} else {
 		smb349_usb_hc_mode(smb349_chg, USB_HC_MODE_BIT);
-#if SMB349_BOOSTBACK_WORKAROUND
-		if (count_no_aicl > 2)
-			count_no_aicl = 0;
-#endif
-		pr_info("chg_state 3 = %d\n", chg_state);
+		pr_info("chg_state 2 = %d\n", chg_state);
 	}
 }
 #endif
@@ -3480,6 +3480,7 @@ static void smb349_batt_external_power_changed(struct power_supply *psy)
 		smb349_set_usb_2_3_mode(smb349_chg, false);
 #ifdef CONFIG_SMB349_VZW_FAST_CHG
 		vzw_chg_present = USB_PRESENT;
+		if (usb_chg_state != IS_USB_CHARGING_ENABLE)
 		vzw_fast_chg_change_usb_charging_state(smb349_chg);
 		pr_info("VZW_CHG_PRESENT = USB_PRESENT\n");
 #else
@@ -3566,9 +3567,6 @@ static void smb349_batt_external_power_changed(struct power_supply *psy)
 		if(!smb349_is_charger_present(smb349_chg->client)){
 			lge_usb_config_finish = 0;
 			usb_chg_state = IS_USB_DRIVER_UNINSTALLED;
-#if SMB349_BOOSTBACK_WORKAROUND
-			count_no_aicl = 0;
-#endif
 		}
 		chg_state = VZW_NO_CHARGER;
 		vzw_chg_present = NOT_PRESENT;
@@ -3685,11 +3683,11 @@ static int smb349_batt_power_get_property(struct power_supply *psy,
 #endif
 		break;
 	case POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL:
-		/* it makes ibat max set following themral mitigation.
-		 * But, SMB349 cannot control ibat current like PMIC.
-		 * if LGE charging scenario make charging thermal control,
-		 * it is good interface to use LG mitigation level.
-		 */
+		/*                                                    
+                                                       
+                                                            
+                                                     
+   */
 		val->intval = 0;
 		break;
 	case POWER_SUPPLY_PROP_PSEUDO_BATT:
@@ -3699,7 +3697,7 @@ static int smb349_batt_power_get_property(struct power_supply *psy,
 		val->intval = lge_pm_get_cable_type();
 		break;
 #ifdef CONFIG_MAX17050_FUELGAUGE
-/*junnyoung.jang@lge.com 20130326 Add battery condition */
+/*                                                      */
 	case POWER_SUPPLY_PROP_BATTERY_CONDITION:
 		val->intval = lge_pm_get_battery_condition();
 		break;
@@ -3751,6 +3749,7 @@ void set_usb_present(int value)
 	the_smb349_chg->wlc_present = !value;
 	the_smb349_chg->usb_present = value;
 	wake_lock_timeout(&the_smb349_chg->uevent_wake_lock, HZ*2);
+	smb349_pmic_usb_override_wrap(the_smb349_chg, the_smb349_chg->usb_present);
 	power_supply_set_present(the_smb349_chg->usb_psy,value);
 	return;
 }
@@ -3809,11 +3808,11 @@ static int smb349_batt_power_set_property(struct power_supply *psy,
 		smb349_enable_charging(smb349_chg, val->intval);
 		break;
 	case POWER_SUPPLY_PROP_SYSTEM_TEMP_LEVEL:
-		/* it makes ibat max set following themral mitigation.
-		 * But, SMB349 cannot control ibat current like PMIC.
-		 * if LGE charging scenario make charging thermal control,
-		 * it is good interface to use LG mitigation level.
-		 */
+		/*                                                    
+                                                       
+                                                            
+                                                     
+   */
 		break;
 	default:
 		return -EINVAL;
@@ -4746,6 +4745,19 @@ static int smb349_suspend_enable(struct smb349_struct *smb349_chg, bool enable)
 	return 0;
 }
 
+static void smb349_disable_irq(struct smb349_struct *smb349_chg)
+{
+	int ret;
+
+	ret = smb349_write_reg(smb349_chg->client, STATUS_IRQ_REG, 0x00);
+	if (ret)
+		pr_err("Failed to STATUS_IRQ_REG ret:%d", ret);
+
+	ret = smb349_write_reg(smb349_chg->client, FAULT_IRQ_REG, 0x00);
+	if (ret)
+		pr_err("Failed to FAULT_IRQ_REG ret:%d", ret);
+}
+
 #ifdef CONFIG_LGE_PM
 static void smb349_shutdown(struct i2c_client *client)
 {
@@ -4770,11 +4782,19 @@ static void smb349_shutdown(struct i2c_client *client)
 #endif
 	}
 
+	if (smb349_chg->irq) {
+		smb349_disable_irq(smb349_chg);
+		disable_irq_wake(smb349_chg->irq);
+		free_irq(smb349_chg->irq, smb349_chg);
+	}
+
 	if (smb349_pmic_batt_present()) {
 	/* sometimes failed to boot after reseting the phone
 	 * when using low voltage adapter */
 		smb349_pmic_usb_override_wrap(smb349_chg, false);
-
+	/* after entering shutdown, phy_vbus should remain normal operation.
+	 * garantee phy_vbus still remains normal op by using below variable. */
+		smb349_chg->is_phy_forced_on = true;
 		smb349_suspend_enable(smb349_chg, true);
 		mdelay(100);
 		smb349_suspend_enable(smb349_chg, false);

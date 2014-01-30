@@ -432,8 +432,10 @@ static struct socinfo_v1 dummy_socinfo = {
 	.format = 1,
 	.version = 1,
 };
-/*                                                                         */
+
 #ifndef CONFIG_MACH_MSM8974_G2_KDDI
+/*                                                                         */
+/*                                        */
 u16 *poweron_st = 0;
 uint16_t power_on_status_info_get(void)
 {

@@ -20,6 +20,7 @@
 #include <linux/of_gpio.h>
 #include <linux/wakelock.h>
 #include <mach/board_lge.h>
+#include <linux/zwait.h>
 
 #define HALL_DETECT_DELAY 200
 #define POUCH_DETECT_DELAY 100
@@ -524,6 +525,20 @@ static int __devinit pm8xxx_cradle_probe(struct platform_device *pdev)
 	}
 #endif
 	platform_set_drvdata(pdev, cradle);
+
+#ifdef CONFIG_ZERO_WAIT
+	if (cradle->pdata->hallic_pouch_detect_pin > 0)
+		zw_irqs_info_register(hall_pouch_gpio_irq, 1);
+
+#if defined CONFIG_MACH_MSM8974_VU3_KR
+	if (cradle->pdata->hallic_pen_detect_pin > 0)
+		zw_irqs_info_register(hall_pen_gpio_irq, 1);
+#else
+	if (cradle->pdata->hallic_camera_detect_pin > 0)
+		zw_irqs_info_register(hall_camera_gpio_irq, 1);
+#endif
+#endif /* CONFIG_ZERO_WAIT */
+
 	return 0;
 
 err_request_irq:
@@ -546,6 +561,26 @@ err_switch_dev_register:
 static int __devexit pm8xxx_cradle_remove(struct platform_device *pdev)
 {
 	struct pm8xxx_cradle *cradle = platform_get_drvdata(pdev);
+
+#ifdef CONFIG_ZERO_WAIT
+	if (cradle->pdata->hallic_pouch_detect_pin > 0) {
+		zw_irqs_info_unregister(
+			gpio_to_irq(cradle->pdata->hallic_pouch_detect_pin));
+	}
+
+#if defined CONFIG_MACH_MSM8974_VU3_KR
+	if (cradle->pdata->hallic_pen_detect_pin > 0) {
+		zw_irqs_info_unregister(
+			gpio_to_irq(cradle->pdata->hallic_pen_detect_pin));
+	}
+#else
+	if (cradle->pdata->hallic_camera_detect_pin > 0) {
+		zw_irqs_info_unregister(
+			gpio_to_irq(cradle->pdata->hallic_camera_detect_pin));
+	}
+#endif
+#endif /* CONFIG_ZERO_WAIT */
+
 	cancel_delayed_work_sync(&cradle->pouch_work);
 #if defined CONFIG_MACH_MSM8974_VU3_KR
 	cancel_delayed_work_sync(&cradle->pen_work);

@@ -272,13 +272,12 @@ I32S Tcc353xCalculateRssi(I32S _moduleIndex, I32S _diversityIndex,
 	default:
 		TcpalPrintErr((I08S *) "[TCC353X] No baseband name selected\n");
 		break;
-	}
-#endif
-
+		}
+/*
 	TcpalPrintStatus((I08S *)"[TCC353X] RSSI[%d] BB[%d] RF[%d]\n", 
 			 RSSI, (I32S) (_isdbStatusData->bbLoopGain),
 			 (I32S) (_isdbStatusData->rfLoopGain));
-
+*/
 	if (RSSI < -10500)
 		RSSI = -10500;
 	else if (RSSI > 300)

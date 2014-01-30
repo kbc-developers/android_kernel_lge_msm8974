@@ -530,7 +530,7 @@ static int dwc3_otg_set_power(struct usb_phy *phy, unsigned mA)
 
 	power_supply_set_supply_type(dotg->psy, power_supply_type);
 
-/* BEGIN : janghyun.baek@lge.com 2012-12-26 For cable detection*/
+/*                                                             */
 #ifdef CONFIG_LGE_PM
 #if defined(CONFIG_USB_DWC3_MSM_VZW_SUPPORT)
 	if(lge_usb_config_finish == 1 ||
@@ -545,7 +545,7 @@ static int dwc3_otg_set_power(struct usb_phy *phy, unsigned mA)
 		}
 	}
 #endif
-/* END : janghyun.baek@lge.com 2012-12-26 */
+/*                                        */
 
 #ifdef CONFIG_LGE_PM
 	if (slimport_is_connected() && mA > 2)
@@ -560,7 +560,7 @@ static int dwc3_otg_set_power(struct usb_phy *phy, unsigned mA)
 
 	dev_info(phy->dev, "Avail curr from USB = %u\n", mA);
 
-/* BEGIN : janghyun.baek@lge.com 2012-12-26 For cable detection*/
+/*                                                             */
 #ifdef CONFIG_LGE_PM
 	if (dotg->charger->chg_type == DWC3_DCP_CHARGER) {
 		pr_info("msm_otg_notify_power_supply: "
@@ -575,7 +575,7 @@ static int dwc3_otg_set_power(struct usb_phy *phy, unsigned mA)
 		goto psy_error;
 	}
 #endif
-/* END : janghyun.baek@lge.com 2012-12-26 */
+/*                                        */
 
 	if (dotg->charger->max_power <= 2 && mA > 2) {
 		/* Enable charging */
@@ -583,6 +583,20 @@ static int dwc3_otg_set_power(struct usb_phy *phy, unsigned mA)
 			goto psy_error;
 		if (power_supply_set_current_limit(dotg->psy, 1000*mA))
 			goto psy_error;
+#ifdef CONFIG_MACH_MSM8974_G2_KDDI
+		if(!strncmp(dotg->psy->name,"ac", 2)) {
+			dotg->psy = power_supply_get_by_name("usb");
+			if (!dotg->psy)
+				goto psy_error;
+
+			if(power_supply_set_current_limit(dotg->psy, 1000*mA))
+				goto psy_error;
+
+			dotg->psy = power_supply_get_by_name("ac");
+			if (!dotg->psy)
+				goto psy_error;
+		}
+#endif
 	} else if (dotg->charger->max_power > 0 && (mA == 0 || mA == 2)) {
 		/* Disable charging */
 		if (power_supply_set_online(dotg->psy, false))
@@ -591,14 +605,29 @@ static int dwc3_otg_set_power(struct usb_phy *phy, unsigned mA)
 		if (power_supply_set_current_limit(dotg->psy, 0))
 			goto psy_error;
 
-/* BEGIN : janghyun.baek@lge.com 2012-12-26 For cable detection*/
+#ifdef CONFIG_MACH_MSM8974_G2_KDDI
+		if(!strncmp(dotg->psy->name,"ac", 2)) {
+			dotg->psy = power_supply_get_by_name("usb");
+			if (!dotg->psy)
+				goto psy_error;
+
+			if(power_supply_set_current_limit(dotg->psy, 0))
+				goto psy_error;
+
+			dotg->psy = power_supply_get_by_name("ac");
+			if (!dotg->psy)
+				goto psy_error;
+		}
+#endif
+
+/*                                                             */
 #ifdef CONFIG_LGE_PM
 		/* Below line comes from "dwc3_start_chg_det()" because of
 		 * AC(TA) removal detection
 		 */
 		dotg->charger->chg_type = DWC3_INVALID_CHARGER;
 #endif
-/* END : janghyun.baek@lge.com 2012-12-26 */
+/*                                        */
 	}
 
 	power_supply_changed(dotg->psy);
@@ -722,7 +751,7 @@ static void touch_otg_work(struct work_struct *w){
 
 	struct dwc3_otg *dotg = container_of(w, struct dwc3_otg, touch_work);
 
-/*  BEGIN : donguk.ki@lge.com to know usb state on touch*/
+/*                                                      */
 #ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI4
 	if(dotg->charger->max_power == 0) {
 		trigger_baseline_state_machine(0, -1);
@@ -737,7 +766,7 @@ static void touch_otg_work(struct work_struct *w){
 		}
 	}
 #endif
- /* END : donguk.ki@lge.com to know usb state on touch */
+ /*                                                    */
 }
 
 
@@ -909,7 +938,7 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 			work = 1;
 		} else {
 			phy->state = OTG_STATE_A_HOST;
-#ifdef CONFIG_LGE_PM // sangmin978.lee@lge.com, 2013-03-18, For OTG, set usb as a current power supply on host mode.
+#ifdef CONFIG_LGE_PM //                                                                                             
 			dotg->psy = power_supply_get_by_name("usb");
 			if (!dotg->psy)
 				dev_err(phy->dev, "couldn't get usb power supply\n");

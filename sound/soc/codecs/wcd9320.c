@@ -1630,7 +1630,10 @@ static const struct soc_enum rx2_mix1_inp1_chain_enum =
 
 static const struct soc_enum rx2_mix1_inp2_chain_enum =
 	SOC_ENUM_SINGLE(TAIKO_A_CDC_CONN_RX2_B1_CTL, 4, 12, rx_mix1_text);
-
+#ifdef CONFIG_USE_REMOVE_TOUCH_TA_NOISE
+static const struct soc_enum rx2_mix1_inp3_chain_enum =
+	SOC_ENUM_SINGLE(TAIKO_A_CDC_CONN_RX2_B2_CTL, 0, 12, rx_mix1_text);
+#endif
 static const struct soc_enum rx3_mix1_inp1_chain_enum =
 	SOC_ENUM_SINGLE(TAIKO_A_CDC_CONN_RX3_B1_CTL, 0, 12, rx_mix1_text);
 
@@ -1778,7 +1781,13 @@ static const struct snd_kcontrol_new rx2_mix1_inp1_mux =
 
 static const struct snd_kcontrol_new rx2_mix1_inp2_mux =
 	SOC_DAPM_ENUM("RX2 MIX1 INP2 Mux", rx2_mix1_inp2_chain_enum);
+#ifdef CONFIG_USE_REMOVE_TOUCH_TA_NOISE
+static const struct snd_kcontrol_new rx1_mix1_inp3_mux =
+	SOC_DAPM_ENUM("RX1 MIX1 INP3 Mux", rx_mix1_inp3_chain_enum);
 
+static const struct snd_kcontrol_new rx2_mix1_inp3_mux =
+	SOC_DAPM_ENUM("RX2 MIX1 INP3 Mux", rx2_mix1_inp3_chain_enum);
+#endif
 static const struct snd_kcontrol_new rx3_mix1_inp1_mux =
 	SOC_DAPM_ENUM("RX3 MIX1 INP1 Mux", rx3_mix1_inp1_chain_enum);
 
@@ -3660,6 +3669,10 @@ static const struct snd_soc_dapm_route audio_map[] = {
 	{"RX1 MIX1", NULL, "RX1 MIX1 INP3"},
 	{"RX2 MIX1", NULL, "RX2 MIX1 INP1"},
 	{"RX2 MIX1", NULL, "RX2 MIX1 INP2"},
+#ifdef CONFIG_USE_REMOVE_TOUCH_TA_NOISE
+	{"RX2 MIX1", NULL, "RX2 MIX1 INP3"},
+	{"RX1 MIX1", NULL, "RX1 MIX1 INP3"},
+#endif
 	{"RX3 MIX1", NULL, "RX3 MIX1 INP1"},
 	{"RX3 MIX1", NULL, "RX3 MIX1 INP2"},
 	{"RX4 MIX1", NULL, "RX4 MIX1 INP1"},
@@ -3721,6 +3734,10 @@ static const struct snd_soc_dapm_route audio_map[] = {
 	{"RX1 MIX1 INP1", "RX6", "SLIM RX6"},
 	{"RX1 MIX1 INP1", "RX7", "SLIM RX7"},
 	{"RX1 MIX1 INP1", "IIR1", "IIR1"},
+#ifdef CONFIG_USE_REMOVE_TOUCH_TA_NOISE
+	{"RX1 MIX1 INP3", "IIR1", "IIR1"},
+	{"RX2 MIX1 INP3", "IIR1", "IIR1"},
+#endif
 	{"RX1 MIX1 INP1", "IIR2", "IIR2"},
 	{"RX1 MIX1 INP2", "RX1", "SLIM RX1"},
 	{"RX1 MIX1 INP2", "RX2", "SLIM RX2"},
@@ -5370,6 +5387,12 @@ static const struct snd_soc_dapm_widget taiko_dapm_widgets[] = {
 		&rx2_mix1_inp1_mux),
 	SND_SOC_DAPM_MUX("RX2 MIX1 INP2", SND_SOC_NOPM, 0, 0,
 		&rx2_mix1_inp2_mux),
+#ifdef CONFIG_USE_REMOVE_TOUCH_TA_NOISE
+	SND_SOC_DAPM_MUX("RX2 MIX1 INP3", SND_SOC_NOPM, 0, 0,
+		&rx2_mix1_inp3_mux),
+	SND_SOC_DAPM_MUX("RX1 MIX1 INP3", SND_SOC_NOPM, 0, 0,
+		&rx1_mix1_inp3_mux),
+#endif
 	SND_SOC_DAPM_MUX("RX3 MIX1 INP1", SND_SOC_NOPM, 0, 0,
 		&rx3_mix1_inp1_mux),
 	SND_SOC_DAPM_MUX("RX3 MIX1 INP2", SND_SOC_NOPM, 0, 0,

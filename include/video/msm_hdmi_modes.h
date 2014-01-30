@@ -244,7 +244,7 @@ static inline void MSM_HDMI_MODES_SET_SUPP_TIMINGS(
 		MSM_HDMI_MODES_SET_TIMING(lut, HDMI_VFRMT_1920x1080p25_16_9);
 		MSM_HDMI_MODES_SET_TIMING(lut, HDMI_VFRMT_1920x1080p30_16_9);
 	}
-/*LGE_CHANGE : Disable Not-Supported Timing by anx7808*/
+/*                                                    */
 /*
 	if (type & MSM_HDMI_MODES_XTND) {
 		MSM_HDMI_MODES_SET_TIMING(lut, HDMI_VFRMT_3840x2160p30_16_9);

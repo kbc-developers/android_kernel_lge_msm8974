@@ -1154,10 +1154,10 @@ static void mmc_sd_remove(struct mmc_host *host)
 static int mmc_sd_alive(struct mmc_host *host)
 {
 #ifdef CONFIG_MACH_LGE
-	/* LGE_UPDATE, 2013/07/19, G2-FS@lge.com
-	 * When checking whether sd exists or not, using CMD13 is not good.
-	 * It can be async-status between cd-gpio and result of CMD13 according to sd-slot-structure.
-	 */
+	/*                                      
+                                                                    
+                                                                                              
+  */
 	return !mmc_cd_get_status(host);
 #else
 	return mmc_send_status(host->card, NULL);
@@ -1172,9 +1172,9 @@ static void mmc_sd_detect(struct mmc_host *host)
 	int err = 0;
 #ifdef CONFIG_MMC_PARANOID_SD_INIT
 #ifndef CONFIG_MACH_LGE
-	/* LGE_UPDATE, 2013/07/19, G2-FS@lge.com
-	 * for fixing compile-warning
-	 */
+	/*                                      
+                              
+  */
         int retries = 5;
 #endif
 #endif
@@ -1190,10 +1190,10 @@ static void mmc_sd_detect(struct mmc_host *host)
 	 */
 
 #ifdef CONFIG_MACH_LGE
-	/* LGE_UPDATE, 2013/07/19, G2-FS@lge.com
-	 * When checking whether sd exists or not, using CMD13 is not good.
-	 * It can be async-status between cd-gpio and result of CMD13 according to sd-slot-structure.
-	 */
+	/*                                      
+                                                                    
+                                                                                              
+  */
 	if(!mmc_cd_get_status(host))
 	{
 		err = _mmc_detect_card_removed(host);
@@ -1287,10 +1287,10 @@ static int mmc_sd_resume(struct mmc_host *host)
 		err = mmc_sd_init_card(host, host->ocr, host->card);
 
 		#ifdef CONFIG_MACH_LGE
-			/* LGE_CHANGE
-			* Skip below When ENOMEDIUM
-			* 2013-03-09, G2-FS@lge.com
-			*/
+			/*           
+                              
+                              
+   */
 			if (err == -ENOMEDIUM) {
 				printk(KERN_INFO "[LGE][MMC][%-18s( )] error:ENOMEDIUM\n", __func__);
 				break;
@@ -1451,10 +1451,10 @@ int mmc_attach_sd(struct mmc_host *host)
 		err = mmc_sd_init_card(host, host->ocr, NULL);
 
 		#ifdef CONFIG_MACH_LGE
-		/* LGE_CHANGE
-		* Skip below When ENOMEDIUM
-		* 2013-07-16, G2-FS@lge.com
-		*/
+		/*           
+                             
+                             
+  */
 		if (err == -ENOMEDIUM) {
 			printk(KERN_INFO "[LGE][MMC][%-18s( )] error:ENOMEDIUM\n", __func__);
 			retries=0;

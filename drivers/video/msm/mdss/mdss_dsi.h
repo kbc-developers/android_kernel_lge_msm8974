@@ -139,9 +139,9 @@ extern int mdss_dsi_clk_on;
 extern u32 dsi_irq;
 
 #ifdef CONFIG_LGE_LCD_TUNING
-/* LGE_CHANGE_S
- * Add code to apply tuning method for LCD
- * 2012-12-03, minjong.gong@lge.com
+/*             
+                                          
+                                   
 */
 extern struct dsi_cmd_desc *dsi_panel_tun_cmds;
 extern int num_of_tun_cmds;
@@ -200,10 +200,15 @@ struct dsi_clk_desc {
 
 #define MDSS_DSI_MRPS	0x04  /* Maximum Return Packet Size */
 
+#ifdef CONFIG_LGE_SUPORT_OLED_TUNING
+#define DSI_LANE_CTRL_HS_MASK	0x10000000
+#define DSI_LANE_CTRL_LP_MASK	0x0FFFFFFF
+#endif
+
 #ifdef CONFIG_LGE_ESD_CHECK
-/* LGE_CHANGE_S
-* change code for ESD check
-* 2013-04-08, seojin.lee@lge.com
+/*             
+                           
+                                
 */
 #define MDSS_DSI_LEN 44
 #else
@@ -397,14 +402,14 @@ int mdss_dsi_cmds_tx(struct mdss_dsi_ctrl_pdata *ctrl,
 int mdss_dsi_cmds_rx(struct mdss_dsi_ctrl_pdata *ctrl,
 			struct dsi_cmd_desc *cmds, int rlen, u32 rx_flags);
 #ifdef CONFIG_LGE_ESD_CHECK
-/* LGE_CHANGE_S
-* change code for ESD check
-* 2013-04-08, seojin.lee@lge.com
+/*             
+                           
+                                
 */
 void mdss_dsi_cmds_mode1(struct mdss_panel_data *pdata);
 void mdss_dsi_cmds_mode2(struct mdss_panel_data *pdata);
 #endif
-#if defined(CONFIG_OLED_SUPPORT) && defined(CONFIG_LGE_OLED_IMG_TUNING)
+#if defined(CONFIG_LGE_SUPORT_OLED_TUNING)
 int mdss_dsi_panel_img_tune_apply(unsigned int screen_mode);
 #endif
 void mdss_dsi_host_init(struct mipi_panel_info *pinfo,

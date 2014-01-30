@@ -19,7 +19,7 @@
 #define LGE_TOUCH_CORE_H
 
 //#define MT_PROTOCOL_A
-//#define LGE_TOUCH_TIME_DEBUG
+//                            
 #include <linux/earlysuspend.h>
 
 #define MAX_FINGER	10
@@ -49,6 +49,13 @@
 #ifdef CUST_G2_TOUCH
 #include <mach/board_lge.h>
 lcd_maker_id get_panel_maker_id(void);
+#define MINIMUM_PEAK_AMPLITUDE_REG    0x15
+#endif
+#if defined(A1_only) && !defined(CONFIG_MACH_MSM8974_G2_KDDI) && !defined(CONFIG_MACH_MSM8974_G2_OPEN_COM)
+#define DRUMMING_THRESH_N_DISTANCE_REG  0x15
+#endif
+#if defined(CONFIG_LGE_Z_TOUCHSCREEN)
+#define SMALL_FINGER_AMPLITUDE_THRESHOLD_REG    0x17
 #endif
 
 struct touch_device_caps
@@ -172,8 +179,8 @@ enum {
 
 #if defined(CONFIG_LGE_Z_TOUCHSCREEN)
 enum {
-	CUSTOMER_FAMILY_BAR_PATTERN = 0,
-	CUSTOMER_FAMILY_H_PATTERN,
+	TOUCH_PANEL_BAR_PATTERN = 0,
+	TOUCH_PANEL_H_PATTERN,
 };
 #endif
 
@@ -319,8 +326,13 @@ struct lge_touch_data
 	struct delayed_work			work_touch_lock;
 	struct work_struct  		work_fw_upgrade;
 #ifdef CUST_G2_TOUCH
+	struct mutex			irq_work_mutex;
 	struct delayed_work			work_f54;
 	struct delayed_work			work_gesture_wakeup;
+	struct delayed_work			work_thermal;
+#endif
+#if (defined(A1_only) && !defined(CONFIG_MACH_MSM8974_G2_KDDI) && !defined(CONFIG_MACH_MSM8974_G2_OPEN_COM))  || defined(CONFIG_LGE_Z_TOUCHSCREEN)
+	struct delayed_work			work_ime_drumming;
 #endif
 #if defined(CONFIG_FB)
 	struct notifier_block fb_notif;
@@ -340,9 +352,6 @@ struct lge_touch_data
 
 struct touch_device_driver {
 	int		(*probe)		(struct lge_touch_data* lge_touch_ts);
-#if defined(CONFIG_LGE_Z_TOUCHSCREEN)
-	int		(*resolution)	(struct i2c_client *client);
-#endif
 	void	(*remove)		(struct i2c_client *client);
 	int		(*init)			(struct i2c_client *client, struct touch_fw_info* info);
 	int		(*data)			(struct i2c_client *client, struct touch_data* data);
@@ -453,6 +462,13 @@ enum{
 	INCOMIMG_CALL_RESERVED,
 	INCOMIMG_CALL_TOUCH,
 };
+
+#if (defined(A1_only) && !defined(CONFIG_MACH_MSM8974_G2_KDDI) && !defined(CONFIG_MACH_MSM8974_G2_OPEN_COM))  || defined(CONFIG_LGE_Z_TOUCHSCREEN)
+enum{
+	IME_OFF,
+	IME_ON,
+};
+#endif
 
 enum{
 	GHOST_NONE			= 0,

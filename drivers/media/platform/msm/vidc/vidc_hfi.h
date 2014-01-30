@@ -41,8 +41,9 @@
 #define HFI_BUFFERFLAG_DISCONTINUITY	0x80000000
 #define HFI_BUFFERFLAG_TEI				0x40000000
 #define HFI_BUFFERFLAG_DROP_FRAME               0x20000000
-
-
+//                                                                         
+#define HFI_BUFFERFLAG_DROP_FRAME 0x20000000
+//                                                                         
 #define HFI_ERR_SESSION_EMPTY_BUFFER_DONE_OUTPUT_PENDING	\
 	(HFI_OX_BASE + 0x1001)
 #define HFI_ERR_SESSION_SAME_STATE_OPERATION		\

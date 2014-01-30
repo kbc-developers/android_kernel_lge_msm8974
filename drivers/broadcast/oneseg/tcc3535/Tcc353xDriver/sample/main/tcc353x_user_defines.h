@@ -124,16 +124,13 @@ between Telechips and Company.
 /*
                                                                    
 */
-#define STS_POLARITY	(STS_CLK_POS|STS_SYNC_ACT_HIGH|STS_FRM_ACT_HIGH)
+#define STS_POLARITY        (STS_CLK_POS|STS_SYNC_ACT_LOW|STS_FRM_ACT_LOW)
+*/
+#define STS_POLARITY        (STS_CLK_POS|STS_SYNC_ACT_HIGH|STS_FRM_ACT_HIGH)
 
-/*                        */
-#define TCC353X_DLR                             1
-
-#if defined (_USE_LNA_CONTROL_)
-/*                            */
-#define DEF_LNA_GAIN_HIGH_2_LOW_THR 	(-60)
-#define DEF_LNA_GAIN_LOW_2_HIGH_THR 	(-70)
-#define DEF_LNA_CONTROL_COUNT_THR	(1)
-#endif
+/* set stream speed (DLR) */
+#define TCC353X_DLR                             0   // 60MHz
+//#define TCC353X_DLR                             1   // 30MHz
+//#define TCC353X_DLR                             2   // 20MHz
 
 #endif
