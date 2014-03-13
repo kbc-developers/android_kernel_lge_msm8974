@@ -26,7 +26,7 @@
 #include <linux/qpnp/qpnp-adc.h>
 #include <linux/qpnp/power-on.h>
 #include <linux/mfd/pm8xxx/batterydata-lib.h>
-#if defined(CONFIG_MACH_MSM8974_VU3_KR) || defined(CONFIG_MACH_MSM8974_G2_KDDI)
+#ifdef CONFIG_MACH_MSM8974_VU3_KR
 #define EXTERNAL_FUELGAUGE
 #endif
 /* BMS Register Offsets */
@@ -470,7 +470,7 @@ static int get_battery_current(struct qpnp_bms_chip *chip, int *result_ua)
 	unlock_output_data(chip);
 	mutex_unlock(&chip->bms_output_lock);
 
-	pr_debug("vsense_uv=%duV\n", vsense_uv);
+	pr_info("vsense_uv=%duV\n", vsense_uv);
 	/* cast for signed division */
 	temp_current = div_s64((vsense_uv * 1000000LL),
 				(int)chip->r_sense_uohm);
@@ -480,7 +480,7 @@ static int get_battery_current(struct qpnp_bms_chip *chip, int *result_ua)
 		pr_debug("error compensation failed: %d\n", rc);
 
 	*result_ua = temp_current;
-	pr_debug("err compensated ibat=%duA\n", *result_ua);
+	pr_info("err compensated ibat=%duA\n", *result_ua);
 	return 0;
 }
 

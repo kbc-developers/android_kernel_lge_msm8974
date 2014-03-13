@@ -62,7 +62,6 @@
 #include <linux/of_gpio.h>
 #include <linux/mfd/pm8xxx/pm8xxx-adc.h>
 #include <linux/qpnp/qpnp-adc.h>
-#include <linux/zwait.h>
 #include <mach/gpiomux.h>
 
 #undef  LGE_HSD_DEBUG_PRINT /*TODO*/
@@ -276,7 +275,7 @@ static void button_released(struct work_struct *work)
 	int table_size = ARRAY_SIZE(max1462x_ear_3button_type_data);
 	int i;
 
-       // [AUDIO_BSP] 20130201, junday.lee, fix fake button_released return condition
+       //
        if (hi->gpio_get_value_func(hi->gpio_detect) && !atomic_read(&hi->btn_state)){
 		HSD_ERR("button_released but ear jack is plugged out already! just ignore the event.\n");
 		return;
@@ -322,7 +321,7 @@ static void insert_headset(struct hsd_info *hi)
 	irq_set_irq_wake(hi->irq_key, 1);
 	gpio_direction_output(hi->gpio_mic_en, 1);
 #ifdef CONFIG_SWITCH_MAX1462X_WA
-	#if defined (CONFIG_MACH_MSM8974_G2_TMO_US) || defined (CONFIG_MACH_MSM8974_G2_SPR) || defined (CONFIG_MACH_MSM8974_G2_OPEN_COM) || defined (CONFIG_MACH_MSM8974_G2_CA)
+	#if defined (CONFIG_MACH_MSM8974_G2_TMO_US) ||defined (CONFIG_MACH_MSM8974_G2_SPR) || defined (CONFIG_MACH_MSM8974_G2_OPEN_COM)
 		msleep(600);
 		HSD_DBG("insert delay 600\n");
 	#else
@@ -699,9 +698,6 @@ static int lge_hsd_probe(struct platform_device *pdev)
 	/* to detect in initialization with eacjack insertion */
 	schedule_work(&(hi->work));
 #endif
-
-	zw_irqs_info_register(hi->irq_key, 1);
-	zw_irqs_info_register(hi->irq_detect, 1);
 	return ret;
 
 error_09:
@@ -727,9 +723,6 @@ static int lge_hsd_remove(struct platform_device *pdev)
 	struct hsd_info *hi = (struct hsd_info *)platform_get_drvdata(pdev);
 
 	HSD_DBG("lge_hsd_remove\n");
-
-	zw_irqs_info_unregister(hi->irq_key);
-	zw_irqs_info_unregister(hi->irq_detect);
 
 	if (switch_get_state(&hi->sdev))
 		remove_headset(hi);

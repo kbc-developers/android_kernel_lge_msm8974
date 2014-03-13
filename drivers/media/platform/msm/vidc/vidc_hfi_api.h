@@ -45,9 +45,8 @@
 #define HAL_BUFFERFLAG_ENDOFSUBFRAME    0x00000400
 #define HAL_BUFFERFLAG_EOSEQ            0x00200000
 #define HAL_BUFFERFLAG_DROP_FRAME       0x20000000
-//                                                                         
-#define HAL_BUFFERFLAG_DROP_FRAME 0x20000000
-//                                                                         
+
+
 #define HAL_DEBUG_MSG_LOW				0x00000001
 #define HAL_DEBUG_MSG_MEDIUM			0x00000002
 #define HAL_DEBUG_MSG_HIGH				0x00000004

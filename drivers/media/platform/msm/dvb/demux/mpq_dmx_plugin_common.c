@@ -87,11 +87,11 @@ module_param(mpq_sdmx_scramble_even, int, S_IRUGO | S_IWUSR);
 static int mpq_sdmx_scramble_odd = 0x3;
 module_param(mpq_sdmx_scramble_odd, int, S_IRUGO | S_IWUSR);
 
-/*                         */
+/* LGE_BROADCAST_FULLSEG { */
 /* Whether to use secure demux or bypass it. Use for debugging */
 //static int mpq_bypass_sdmx = 1;
 static int mpq_bypass_sdmx = 0;
-/*                         */
+/* LGE_BROADCAST_FULLSEG } */
 
 module_param(mpq_bypass_sdmx, int, S_IRUGO | S_IWUSR);
 
@@ -2088,7 +2088,7 @@ static inline int mpq_dmx_parse_remaining_pes_header(
 {
 	int left_size, copy_len;
 
-	/* Remaining header bytes that need to be processed? */
+	/* Remainning header bytes that need to be processed? */
 	if (!feed_data->pes_header_left_bytes)
 		return 0;
 
@@ -4050,8 +4050,7 @@ static void mpq_sdmx_pes_filter_results(struct mpq_demux *mpq_demux,
 	struct dmx_data_ready pes_event;
 	struct dvb_demux_feed *feed = mpq_feed->dvb_demux_feed;
 	struct dvb_ringbuffer *buf = (struct dvb_ringbuffer *)
-		feed->feed.ts.buffer.ringbuff;
-	ssize_t bytes_avail;
+				feed->feed.ts.buffer.ringbuff;
 
 	if ((!sts->metadata_fill_count) && (!sts->data_fill_count))
 		goto pes_filter_check_overflow;
@@ -4083,18 +4082,13 @@ static void mpq_sdmx_pes_filter_results(struct mpq_demux *mpq_demux,
 	}
 
 	while (sts->metadata_fill_count) {
-		bytes_avail = dvb_ringbuffer_avail(&mpq_feed->metadata_buf);
-		if (bytes_avail < (sizeof(header) + sizeof(counters))) {
+		if (dvb_ringbuffer_avail(&mpq_feed->metadata_buf) <
+			(sizeof(header) + sizeof(counters))) {
 			MPQ_DVB_ERR_PRINT(
-				"%s: metadata_fill_count is %d less than required %d bytes\n",
+				"%s: metadata_fill_count is %d but actual buffer has less than %d bytes\n",
 				__func__,
 				sts->metadata_fill_count,
 				sizeof(header) + sizeof(counters));
-
-			/* clean-up remaining bytes to try to recover */
-			DVB_RINGBUFFER_SKIP(&mpq_feed->metadata_buf,
-				bytes_avail);
-			sts->metadata_fill_count = 0;
 			break;
 		}
 
@@ -4179,7 +4173,6 @@ static void mpq_sdmx_section_filter_results(struct mpq_demux *mpq_demux,
 	struct dvb_demux_feed *feed = mpq_feed->dvb_demux_feed;
 	struct dvb_demux_filter *f;
 	struct dmx_section_feed *sec = &feed->feed.sec;
-	ssize_t bytes_avail;
 
 	/* Parse error indicators */
 	if (sts->error_indicators & SDMX_FILTER_ERR_SEC_VERIF_CRC32_FAIL) {
@@ -4200,21 +4193,6 @@ static void mpq_sdmx_section_filter_results(struct mpq_demux *mpq_demux,
 	mpq_feed->sdmx_buf.pwrite = sts->data_write_offset;
 
 	while (sts->metadata_fill_count) {
-		bytes_avail = dvb_ringbuffer_avail(&mpq_feed->metadata_buf);
-		if (bytes_avail < sizeof(header)) {
-			MPQ_DVB_ERR_PRINT(
-				"%s: metadata_fill_count is %d less than required %d bytes\n",
-				__func__,
-				sts->metadata_fill_count,
-				sizeof(header));
-
-			/* clean-up remaining bytes to try to recover */
-			DVB_RINGBUFFER_SKIP(&mpq_feed->metadata_buf,
-				bytes_avail);
-			sts->metadata_fill_count = 0;
-			break;
-		}
-
 		dvb_ringbuffer_read(&mpq_feed->metadata_buf, (u8 *) &header,
 			sizeof(header));
 		sts->metadata_fill_count -= sizeof(header);
@@ -4258,10 +4236,10 @@ static void mpq_sdmx_decoder_filter_results(struct mpq_demux *mpq_demux,
 	u8 metadata_buf[MAX_SDMX_METADATA_LENGTH];
 	struct mpq_streambuffer *sbuf;
 	int ret;
+	int pes_cnt = 0;
 	struct dmx_data_ready data_event;
 	struct dmx_data_ready data;
 	struct dvb_demux_feed *feed = mpq_feed->dvb_demux_feed;
-	ssize_t bytes_avail;
 
 	if ((!sts->metadata_fill_count) && (!sts->data_fill_count))
 		goto decoder_filter_check_flags;
@@ -4288,21 +4266,7 @@ static void mpq_sdmx_decoder_filter_results(struct mpq_demux *mpq_demux,
 		struct mpq_streambuffer_packet_header packet;
 		struct mpq_adapter_video_meta_data meta_data;
 
-		bytes_avail = dvb_ringbuffer_avail(&mpq_feed->metadata_buf);
-		if (bytes_avail < (sizeof(header) + sizeof(counters))) {
-			MPQ_DVB_ERR_PRINT(
-				"%s: metadata_fill_count is %d less than required %d bytes\n",
-				__func__,
-				sts->metadata_fill_count,
-				sizeof(header) + sizeof(counters));
-
-			/* clean-up remaining bytes to try to recover */
-			DVB_RINGBUFFER_SKIP(&mpq_feed->metadata_buf,
-				bytes_avail);
-			sts->metadata_fill_count = 0;
-			break;
-		}
-
+		pes_cnt++;
 		/* Read metadata header */
 		dvb_ringbuffer_read(&mpq_feed->metadata_buf, (u8 *)&header,
 			sizeof(header));
@@ -4318,28 +4282,15 @@ static void mpq_sdmx_decoder_filter_results(struct mpq_demux *mpq_demux,
 		sts->metadata_fill_count -= sizeof(counters);
 
 		/* Read metadata - TS & PES headers */
-		bytes_avail = dvb_ringbuffer_avail(&mpq_feed->metadata_buf);
-		if ((header.metadata_length < MAX_SDMX_METADATA_LENGTH) &&
-			(header.metadata_length >= sizeof(counters)) &&
-			(bytes_avail >=
-			 (header.metadata_length - sizeof(counters)))) {
+		if (header.metadata_length < MAX_SDMX_METADATA_LENGTH)
 			dvb_ringbuffer_read(&mpq_feed->metadata_buf,
 				metadata_buf,
 				header.metadata_length - sizeof(counters));
-		} else {
+		else
 			MPQ_DVB_ERR_PRINT(
-				"%s: meta-data size %d larger than available meta-data %d or max allowed %d\n",
+				"%s: meta-data size=%d is too big for meta-data buffer=%d\n",
 				__func__, header.metadata_length,
-				bytes_avail,
 				MAX_SDMX_METADATA_LENGTH);
-
-			/* clean-up remaining bytes to try to recover */
-			DVB_RINGBUFFER_SKIP(&mpq_feed->metadata_buf,
-				bytes_avail);
-			sts->metadata_fill_count = 0;
-			break;
-		}
-
 		sts->metadata_fill_count -=
 			(header.metadata_length - sizeof(counters));
 
@@ -4472,7 +4423,6 @@ static void mpq_sdmx_pcr_filter_results(struct mpq_demux *mpq_demux,
 	u8 buf[TS_PACKET_HEADER_LENGTH + MAX_TSP_ADAPTATION_LENGTH +
 	       TIMESTAMP_LEN];
 	size_t stc_len = 0;
-	ssize_t bytes_avail;
 
 	if (sts->error_indicators & SDMX_FILTER_ERR_D_BUF_FULL)
 		MPQ_DVB_ERR_PRINT("%s: internal PCR buffer overflowed!\n",
@@ -4488,21 +4438,6 @@ static void mpq_sdmx_pcr_filter_results(struct mpq_demux *mpq_demux,
 	rbuff->pwrite = sts->data_write_offset;
 
 	while (sts->metadata_fill_count) {
-		bytes_avail = dvb_ringbuffer_avail(&mpq_feed->metadata_buf);
-		if (bytes_avail < sizeof(header)) {
-			MPQ_DVB_ERR_PRINT(
-				"%s: metadata_fill_count is %d less than required %d bytes\n",
-				__func__,
-				sts->metadata_fill_count,
-				sizeof(header));
-
-			/* clean-up remaining bytes to try to recover */
-			DVB_RINGBUFFER_SKIP(&mpq_feed->metadata_buf,
-				bytes_avail);
-			sts->metadata_fill_count = 0;
-			break;
-		}
-
 		dvb_ringbuffer_read(&mpq_feed->metadata_buf, (u8 *) &header,
 			sizeof(header));
 		MPQ_DVB_DBG_PRINT(
@@ -4788,14 +4723,6 @@ int mpq_sdmx_process(struct mpq_demux *mpq_demux,
 		todo = fill_count > limit ? limit : fill_count;
 		ret = mpq_sdmx_process_buffer(mpq_demux, input, todo,
 			read_offset);
-		
-        if(mpq_demux->demux.sw_filter_abort){
-	           MPQ_DVB_DBG_PRINT(
-		           "%s: Demuxing from DVR was aborted\n",
-		            __func__);			
-			return -ENODEV;
-        }
-
 		if (ret > 0) {
 			total_bytes_read += ret;
 			fill_count -= ret;

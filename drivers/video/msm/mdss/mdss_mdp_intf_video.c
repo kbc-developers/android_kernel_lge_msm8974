@@ -18,15 +18,14 @@
 #include <linux/dma-mapping.h>
 
 #include "mdss_mdp.h"
-#ifdef CONFIG_OLED_SUPPORT
-#include "mdss_dsi.h"	// for 4th panel
-extern int mdss_dsi_lane_config(struct mdss_panel_data *pdata, int enable);
+#ifdef CONFIG_OLED_SUPPORT  // for 4th panel
+#include "mdss_dsi.h"
 #endif
 
 #ifdef CONFIG_MACH_LGE
-/*                            */
+/* LGE_UPDATE_S for MINIOS2.0 */
 #include <mach/board_lge.h>
-/*                            */
+/* LGE_UPDATE_E for MINIOS2.0 */
 #endif
 #include "mdss_panel.h"
 
@@ -189,7 +188,7 @@ static int mdss_mdp_video_timegen_setup(struct mdss_mdp_video_ctx *ctx,
 		       (hsync_polarity << 0);  /* HSYNC Polarity */
 
 #ifdef CONFIG_MACH_LGE
-	/*                            */
+	/* LGE_UPDATE_S for MINIOS2.0 */
 	if (lge_get_boot_mode() == LGE_BOOT_MODE_MINIOS) {
 		if (MDSS_INTF_HDMI == ctx->intf_type) {
 			pr_info("[miniOS] Enable HDMI Grayscale Ramp Pattern");
@@ -197,7 +196,7 @@ static int mdss_mdp_video_timegen_setup(struct mdss_mdp_video_ctx *ctx,
 			mdp_video_write(ctx, MDSS_MDP_REG_INTF_TPG_MAIN_CONTROL,0x40);
 		}
 	}
-	/*                            */
+	/* LGE_UPDATE_E for MINIOS2.0 */
 #endif
 
 	mdp_video_write(ctx, MDSS_MDP_REG_INTF_HSYNC_CTL, hsync_ctl);
@@ -525,7 +524,6 @@ static int mdss_mdp_video_display(struct mdss_mdp_ctl *ctl, void *arg)
 
 #ifdef CONFIG_OLED_SUPPORT
 		if(ctl->panel_data->panel_info.type == MIPI_VIDEO_PANEL){
-			mdss_dsi_lane_config(ctl->panel_data, 1);
 			if (!(ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT)) {
 				rc = ctrl_pdata->on(ctl->panel_data);
 				if (rc) {
@@ -535,7 +533,6 @@ static int mdss_mdp_video_display(struct mdss_mdp_ctl *ctl, void *arg)
 				}
 				ctrl_pdata->ctrl_state |= CTRL_STATE_PANEL_INIT;
 			}
-			mdss_dsi_lane_config(ctl->panel_data, 0);
 		}
 #endif
 	}
@@ -618,7 +615,12 @@ int mdss_mdp_video_reconfigure_splash_done(struct mdss_mdp_ctl *ctl)
 	int mdss_v2_intf_off = 0;
 
 	off = 0;
+
 	pdata = ctl->panel_data;
+
+#ifdef CONFIG_OLED_SUPPORT
+	ret = mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_FIRST_FRAME_UPDATE, NULL);
+#endif
 	pdata->panel_info.cont_splash_enabled = 0;
 
 	ret = mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_CONT_SPLASH_BEGIN,
@@ -693,10 +695,10 @@ int mdss_mdp_video_start(struct mdss_mdp_ctl *ctl)
 				   mdss_mdp_video_underrun_intr_done, ctl);
 
 #ifdef CONFIG_LGE_LCD_TUNING
-	/*           
-                                  
-                                    
-  */
+	/* LGE_CHANGE
+	 * Implement for LCD porch tuning
+	 * 2013-01-25, baryun.hwang@lge.com
+	 */
 	pinfo->lcdc.h_back_porch = tun_porch_value[0];
 	pinfo->lcdc.h_front_porch = tun_porch_value[2];
 	pinfo->lcdc.v_back_porch = tun_porch_value[3];

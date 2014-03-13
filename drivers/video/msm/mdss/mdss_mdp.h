@@ -47,10 +47,6 @@
 #define C1_B_Cb		1	/* B/Cb */
 #define C0_G_Y		0	/* G/luma */
 
-#ifdef CONFIG_OLED_SUPPORT
-#define KOFF_TIMEOUT msecs_to_jiffies(84)
-#endif
-
 #ifdef CONFIG_MACH_LGE
 #define QCT_AUTO_PLL_PATCH
 #endif
@@ -153,9 +149,9 @@ struct mdss_mdp_ctl {
 	int power_on;
 
 #ifdef QCT_AUTO_PLL_PATCH
-/*           
-                                               
-                                  
+/* LGE_CHANGE
+* This is for auto pll patch from case#01156220
+* 2013-05-25, baryun.hwang@lge.com
 */
 	u32 panel_ndx;
 #endif

@@ -663,9 +663,9 @@ void __ext4_abort(struct super_block *sb, const char *function,
 		save_error_info(sb, function, line);
 	#ifdef CONFIG_MACH_LGE
 	/*
-                          
-                                             
- */
+	2013-07-06, G2-FS@lge.com
+	put panic when FS is re-mounted as Read Only
+	*/
 	panic("EXT4-fs panic from previous error. remounted as RO \n");
 	#endif
 
@@ -1829,9 +1829,9 @@ static int ext4_setup_super(struct super_block *sb, struct ext4_super_block *es,
 	if (le32_to_cpu(es->s_rev_level) > EXT4_MAX_SUPP_REV) {
 		ext4_msg(sb, KERN_ERR, "revision level too high, "
 			 "forcing read-only mode");
-		/*                         */
+		/*LGE_CHANGE G2-FS@lge.com */
 		res = MS_RDONLY;
-		/*                         */
+		/*LGE_CHANGE G2-FS@lge.com */
 	}
 	if (read_only)
 		goto done;
@@ -1844,9 +1844,9 @@ static int ext4_setup_super(struct super_block *sb, struct ext4_super_block *es,
 			 "running e2fsck is recommended");
 	#ifdef CONFIG_EXT4_LGE_JOURNAL_RECOVERY
 	/*
-                             
-                                                                                 
- */
+	 * 2013-07-25, G2-FS@lge.com
+	 * in this case, we need to run e2fsck with j & fy option, let's return EJOURNAL
+	*/
 		res = EJOURNAL;
 	#endif
 	}
@@ -3708,12 +3708,12 @@ no_journal:
 
 #ifdef CONFIG_EXT4_LGE_JOURNAL_RECOVERY
 /*
-                           
-                                                                
-                                                         
-                                                                
-                                                                                       
-                                                                     
+ *2013-07-25, G2-FS@lge.com
+ *if 'sbi->s_mount_state & EXT4_ERROR_FS ' mountOK gets EJOURNAL
+ *in this case, we need to run e2fsck with j & fy options
+ *To do this, ext4_fill_super() should return its failure value.
+ *Frst value '3' shows the phone is in the middle of factory reset or the first bootup.
+ *Let's return EJOURNAL when mountOK gets EJOURNAL and frst is not 3.
 */
 
 if ( (mountOK == EJOURNAL) && (get_lge_frst_status( ) != 3 ) )
@@ -3730,8 +3730,8 @@ cantfind_ext4:
 		ext4_msg(sb, KERN_ERR, "VFS: Can't find ext4 filesystem");
 #ifdef CONFIG_MACH_LGE
 /*
-                         
-                                             
+2013-06-14, G2-FS@lge.com
+add return code if ext4 superblock is damaged
 */
 	ret=-ESUPER;
 #endif
@@ -4312,9 +4312,9 @@ static int ext4_remount(struct super_block *sb, int *flags, char *data)
 	char *orig_data = kstrdup(data, GFP_KERNEL);
 
 #ifdef CONFIG_MACH_LGE
-	/*                                      
-                        
-  */
+	/* LGE_UPDATE, 2013/05/07, G2-FS@lge.com
+	 * For more information
+	 */
 	if(*flags & MS_RDONLY)
 		ext4_msg(sb, KERN_INFO, "re-mount start. with ro");
 	else

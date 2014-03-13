@@ -15,13 +15,8 @@
 // FullRawCapacitance Support 0D button
 //
 #include "RefCode_F54.h"
-#if defined(CONFIG_MACH_MSM8974_VU3_KR)
-#include "TestLimits_vu3.h"
-#elif defined(CONFIG_LGE_Z_TOUCHSCREEN)
-#include "TestLimits_zee.h"
-#else
 #include "TestLimits.h"
-#endif
+
 #if 0
 #ifdef _DEBUG
 #define DEBUG_printk(format, ...) printk(format, __VA_ARGS__)
@@ -162,11 +157,8 @@ unsigned char TRX_Open[7] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00} ;
 unsigned char TRX_Gnd[7] = {0xff,0xff,0xff,0xff,0x3,0xff,0xfc} ;
 unsigned char TRX_Short[7] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00} ;
 int HighResistanceLowerLimit[3] = {-1000, -1000, -400};
-#ifdef CONFIG_MACH_MSM8974_G2_OPEN_COM
-int HighResistanceUpperLimit[3] = {450, 500, 200};
-#else
 int HighResistanceUpperLimit[3] = {450, 450, 200};
-#endif
+
 
 enum {
 	STARTTIME,
@@ -179,9 +171,6 @@ struct timeval t_interval[TIME_PROFILE_MAX];
 static int outbuf = 0;
 char f54_wlog_buf[6000] = {0};
 
-#if defined(CONFIG_LGE_Z_TOUCHSCREEN)
-int use_test_limit_2 = 0;
-#endif
 
 #if 0
 // Read one or more sensor registers. The number of registers to read (starting
@@ -387,22 +376,6 @@ int CompareImageReport(void)
 	int i,j,node_crack_count=0,rx_crack_count=0, row_crack_count = 0;
 
 	//Compare 0D area
-#if defined(CONFIG_MACH_MSM8974_VU3_KR)
-	if (ButtonCount > 0){
-		for(i = 0; i < ButtonCount; i++){
-			for(j=0; j<(int)F12_2DTxCount;j++){
-				if( (LowerImageLimit[j][F12_2DRxCount+i]>0) && (UpperImageLimit[j][F12_2DRxCount+i]>0 )){
-					if ((ImagepF[j][F12_2DRxCount+i] < LowerImageLimit[j][F12_2DRxCount+i]) ||
-						(ImagepF[j][F12_2DRxCount+i] > UpperImageLimit[j][F12_2DRxCount+i])){
-						printk("[Touch] ButtonCheck-FAIL Tx[%d] Rx[%d]\n",j,F12_2DRxCount+i);
-						result = false;
-						break;
-					}
-				}
-			}
-		}
-	}
-#else
 	if (ButtonCount > 0){
 		for(i = 0; i < ButtonCount; i++){
 			if ((ImagepF[TxChannelCount-1][F12_2DRxCount + i] < LowerImageLimit[TxChannelCount-1][F12_2DRxCount + i]) ||
@@ -414,7 +387,6 @@ int CompareImageReport(void)
 		}
 
 	}
-#endif
 	//Compare 2D area
 	for (j = 0; j < (int)F12_2DRxCount; j++){
 		extern int f54_window_crack;
@@ -423,73 +395,36 @@ int CompareImageReport(void)
 		rx_crack_count = 0;
 
 		for (i = 0; i < (int)F12_2DTxCount; i++){
-#if defined(CONFIG_LGE_Z_TOUCHSCREEN)
-			if (use_test_limit_2) {
-				if ((ImagepF[i][j] < LowerImageLimit2[i][j]) || (ImagepF[i][j] > UpperImageLimit2[i][j]))	{
-					if(f54_window_crack_check_mode) {
-						if (ImagepF[i][j] < 300){
-							rx_crack_count++;
-							node_crack_count++;
-						}
-						else row_crack_count = 0;
-
-						if (F12_2DTxCount<=rx_crack_count) row_crack_count++;
-
-						if (2<row_crack_count){
-							f54_window_crack = 1;
-							break;
-						}
-
-						if((int)(F12_2DTxCount*F12_2DRxCount*20/100)<node_crack_count) {
-							result = false;
-							f54_window_crack = 1;
-							break;
-						}
-
-						printk("[Touch] Tx [%d] Rx [%d] node_crack_count %d, row_crack_count %d, raw cap %d\n",i, j,node_crack_count,row_crack_count, ImagepF[i][j]);
+			if ((ImagepF[i][j] < LowerImageLimit[i][j]) || (ImagepF[i][j] > UpperImageLimit[i][j]))	{
+				if(f54_window_crack_check_mode) {
+					if (ImagepF[i][j] < 300){
+						rx_crack_count++;
+						node_crack_count++;
 					}
-					else {
-						//printf("Failed: 2D area: Tx [%d] Rx [%d]\n",i, j);
-						outbuf += sprintf(f54_wlog_buf+outbuf, "FAIL, %d,%d,%d\n", i, j, ImagepF[i][j]);
-						result = false;
+					else row_crack_count = 0;
+
+					if (F12_2DTxCount<=rx_crack_count) row_crack_count++;
+
+					if (2<row_crack_count){
+						f54_window_crack = 1;
 						break;
 					}
-				}
-			} else {
-#endif
-				if ((ImagepF[i][j] < LowerImageLimit[i][j]) || (ImagepF[i][j] > UpperImageLimit[i][j]))	{
-					if(f54_window_crack_check_mode) {
-						if (ImagepF[i][j] < 300){
-							rx_crack_count++;
-							node_crack_count++;
-						}
-						else row_crack_count = 0;
 
-						if (F12_2DTxCount<=rx_crack_count) row_crack_count++;
-
-						if (2<row_crack_count){
-							f54_window_crack = 1;
-							break;
-						}
-
-						if((int)(F12_2DTxCount*F12_2DRxCount*20/100)<node_crack_count) {
-							result = false;
-							f54_window_crack = 1;
-							break;
-						}
-
-						printk("[Touch] Tx [%d] Rx [%d] node_crack_count %d, row_crack_count %d, raw cap %d\n",i, j,node_crack_count,row_crack_count, ImagepF[i][j]);
-					}
-					else {
-						//printf("Failed: 2D area: Tx [%d] Rx [%d]\n",i, j);
-						outbuf += sprintf(f54_wlog_buf+outbuf, "FAIL, %d,%d,%d\n", i, j, ImagepF[i][j]);
+					if((int)(F12_2DTxCount*F12_2DRxCount*20/100)<node_crack_count) {
 						result = false;
+						f54_window_crack = 1;
 						break;
 					}
+
+					printk("[Touch] Tx [%d] Rx [%d] node_crack_count %d, row_crack_count %d, raw cap %d\n",i, j,node_crack_count,row_crack_count, ImagepF[i][j]);
 				}
-#if defined(CONFIG_LGE_Z_TOUCHSCREEN)
+				else {
+					//printf("Failed: 2D area: Tx [%d] Rx [%d]\n",i, j);
+					outbuf += sprintf(f54_wlog_buf+outbuf, "FAIL, %d,%d,%d\n", i, j, ImagepF[i][j]);
+					result = false;
+					break;
+				}
 			}
-#endif
 		}
 	}
 
@@ -1083,10 +1018,6 @@ void RunQueries(void)
   int txCount = 0;
   int offset = 0;
 	int i,j = 0;
-#if defined(CONFIG_MACH_MSM8974_VU3_KR)
-	int k = 0;
-	int cnt = 0;
-#endif
 
 	// Scan Page Description Table (PDT) to find all RMI functions presented by this device.
 	// The Table starts at $00EE. This and every sixth register (decrementing) is a function number
@@ -1106,18 +1037,14 @@ void RunQueries(void)
 				bHaveF01 = true;
 				break;
 			}
-#if defined(CONFIG_MACH_MSM8974_VU3_KR)
+#if 0
 		case 0x1a:
 			if(!bHaveF1A){
 				k =0;
 				Read8BitRegisters((cAddr-3), &F1AControlBase, 1);
 				Read8BitRegisters(F1AControlBase+1, &ButtonCount, 1);
-				//ButtonCount = log((double)ButtonCount+1 )/ log(2.0);
-				while(ButtonCount){
-					cnt++;
-					ButtonCount=(ButtonCount>>1);
-				}
-				ButtonCount=cnt;
+				ButtonCount = log((double)ButtonCount+1 )/ log(2.0);
+
 				for (i = 0; i < ButtonCount; i++){
 					Read8BitRegisters(F1AControlBase + 3 + k, &ButtonTx[i], 1);
 					Read8BitRegisters(F1AControlBase + 3 + k + 1 , &ButtonRx[i], 1);
@@ -1158,11 +1085,6 @@ void RunQueries(void)
 				break;
 			}
 		case 0x54:
-#if defined(CONFIG_LGE_Z_TOUCHSCREEN)
-			/* re-check F54 registers for Folder Test */
-			/* initial touch panel = E032 */
-			bHaveF54 = false;
-#endif
 			if (!bHaveF54){
 				Read8BitRegisters((cAddr-2), &F54DataBase, 1);
 				Read8BitRegisters((cAddr-3), &F54ControlBase, 1);

@@ -342,6 +342,7 @@ int bcm_wifi_set_power(int enable)
 		}
 
 		// WLAN chip down 
+		mdelay(100);//for booting time save
 		printk(KERN_ERR "%s: wifi power successed to pull down\n",__func__);
 	}
 

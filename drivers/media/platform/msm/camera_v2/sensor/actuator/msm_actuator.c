@@ -769,11 +769,8 @@ static unsigned int msm_actuator_StablePosition_delay_calc(int16_t cur_dac, int1
 static int16_t msm_actuator_StablePosition_pos_calc(int16_t cur_pos)
 {
 	//You can use the actuator postion tuning
-#if defined(CONFIG_LG_OIS)
-	return 0;
-#else
-	return cur_pos * 1 /2; /*                                                                              */
-#endif
+	//return cur_pos * 1 /2;
+	return 0; /* LGE_CHANGE, directly go to 0 because of using HW damping, 2013-06-28, hyungmoo.huh@lge.com */
 }
 
 static int32_t msm_actuator_StablePosition(struct msm_actuator_ctrl_t *a_ctrl)

@@ -114,10 +114,8 @@ EXPORT_SYMBOL(system_state);
  */
 #define MAX_INIT_ARGS CONFIG_INIT_ENV_ARG_LIMIT
 #define MAX_INIT_ENVS CONFIG_INIT_ENV_ARG_LIMIT
-
-#ifndef CONFIG_MACH_MSM8974_G2_KDDI
 /*                                                                         */
-/*                                       */
+#ifndef CONFIG_MACH_MSM8974_G2_KDDI
 static void smpl_count(void);
 /*                             */
 /*                                                                         */
@@ -394,10 +392,8 @@ static noinline void __init_refok rest_init(void)
 	/* Call into cpu_idle with preempt disabled */
 	cpu_idle();
 }
-
-#ifndef CONFIG_MACH_MSM8974_G2_KDDI
 /*                                                                         */
-/*                                        */
+#ifndef CONFIG_MACH_MSM8974_G2_KDDI
 //                    
 #define PWR_ON_EVENT_KEYPAD			0x80
 #define PWR_ON_EVENT_CABLE			0x40
@@ -464,7 +460,6 @@ static void smpl_count(void)
 /*                                                                          */
 /* Check for early params. */
 #endif
-
 static int __init do_early_param(char *param, char *val)
 {
 	const struct obs_kernel_param *p;
@@ -976,10 +971,8 @@ static int __init kernel_init(void * unused)
 	 * we're essentially up and running. Get rid of the
 	 * initmem segments and start the user-mode stuff..
 	 */
-
-#ifndef CONFIG_MACH_MSM8974_G2_KDDI
 /*                                                                         */
-/*                                        */
+#ifndef CONFIG_MACH_MSM8974_G2_KDDI
 	smpl_count();
 /*                              */
 /*                                                                         */

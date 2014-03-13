@@ -25,67 +25,6 @@
  */
 int g_is_tlmm_spare_reg_value = 0;
 
-#ifdef CONFIG_LGE_PM
-static struct gpiomux_setting nc_pin_cfg = {
-	.func = GPIOMUX_FUNC_1,
-	.drv = GPIOMUX_DRV_2MA,
-	.pull = GPIOMUX_PULL_DOWN,
-	.dir = GPIOMUX_IN,
-};
-
-
-static struct msm_gpiomux_config msm8974_nc_pin_configs[] __initdata = {
-
-	{
-		.gpio = 25,
-		.settings = {
-			[GPIOMUX_SUSPENDED] = &nc_pin_cfg,
-		}
-	},
-	
-	{
-		.gpio = 29,
-		.settings = {
-			[GPIOMUX_SUSPENDED] = &nc_pin_cfg,
-		}
-	},
-	
-	{
-		.gpio = 45,
-		.settings = {
-			[GPIOMUX_SUSPENDED] = &nc_pin_cfg,
-		}
-	},
-	
-	{
-		.gpio = 46,
-		.settings = {
-			[GPIOMUX_SUSPENDED] = &nc_pin_cfg,
-		}
-	},
-	
-	{
-		.gpio = 49,
-		.settings = {
-			[GPIOMUX_SUSPENDED] = &nc_pin_cfg,
-		}
-	},
-	
-	{
-		.gpio = 69,
-		.settings = {
-			[GPIOMUX_SUSPENDED] = &nc_pin_cfg,
-		}
-	},
-	
-	{
-		.gpio = 102,
-		.settings = {
-			[GPIOMUX_SUSPENDED] = &nc_pin_cfg,
-		}
-	},
-};
-#endif
 static struct gpiomux_setting ap2mdm_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_8MA,
@@ -230,6 +169,12 @@ static struct gpiomux_setting snfc_hvdd_cfg = {
     .drv = GPIOMUX_DRV_2MA,
     .pull = GPIOMUX_PULL_NONE,
     .dir = GPIOMUX_OUT_LOW,
+};
+static struct gpiomux_setting snfc_uicc_cfg = {
+    .func = GPIOMUX_FUNC_GPIO,
+    .drv = GPIOMUX_DRV_2MA,
+    .pull = GPIOMUX_PULL_NONE,
+    .dir = GPIOMUX_OUT_HIGH,
 };
 #endif
 
@@ -982,7 +927,7 @@ static struct msm_gpiomux_config msm8974_nfc_configs[] __initdata ={
 			.settings = {
 				[GPIOMUX_SUSPENDED] = &snfc_uicc_cfg,
 			},
-		},                
+		},		
 };
 #endif
 
@@ -2398,9 +2343,6 @@ msm_gpiomux_install(msm_sensor_configs, ARRAY_SIZE(msm_sensor_configs));
 #if defined(CONFIG_BQ24192_CHARGER)
 	msm_gpiomux_install(bq_chg_int_configs, ARRAY_SIZE(bq_chg_int_configs));
 	msm_gpiomux_install(bq_chg_en_n_configs, ARRAY_SIZE(bq_chg_en_n_configs));
-#endif
-#ifdef CONFIG_LGE_PM
-	msm_gpiomux_install(msm8974_nc_pin_configs, ARRAY_SIZE(msm8974_nc_pin_configs));
 #endif
 
 	if (of_board_is_dragonboard() && machine_is_apq8074())

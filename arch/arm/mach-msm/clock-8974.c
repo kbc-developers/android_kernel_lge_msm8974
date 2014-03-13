@@ -2809,9 +2809,9 @@ static struct clk_freq_tbl ftbl_camss_gp0_1_clk[] = {
 	F_MM(10000,       cxo,  16,   1, 120),
 	F_MM(20000,       cxo,  16,   1,  50),
 #if defined(CONFIG_LGE_SM100) || defined(CONFIG_TSPDRV)
-	F_MM(29268,       cxo,  8,   1,  82), /* for 230Hz on Vu3,Z*/
+	F_MM(29268,       cxo,  8,   1,  82), /* for 230Hz -> Spec out*/
 	F_MM(29813,       cxo,  7,   1,  92), /* for 230Hz */
-	F_MM(29090,       cxo,  6,   1,  110), /* for 230Hz*/
+	F_MM(29090,       cxo,  6,   1,  110), /* for 230Hz on VU3*/
 	F_MM(22222,       cxo,  16,   1,  54), /* for 175Hz */
 #endif
 	F_MM(6000000,   gpll0,  10,   1,  10),
@@ -3834,7 +3834,6 @@ static struct branch_clk camss_mclk3_clk = {
 static struct branch_clk camss_micro_ahb_clk = {
 	.cbcr_reg = CAMSS_MICRO_AHB_CBCR,
 	.has_sibling = 1,
-	.bcr_reg = CAMSS_MICRO_BCR,  //                                                                           
 	.base = &virt_bases[MMSS_BASE],
 	.c = {
 		.dbg_name = "camss_micro_ahb_clk",
@@ -4923,8 +4922,8 @@ static struct clk_lookup msm_clocks_8974[] = {
 	CLK_LOOKUP("core_clk", gcc_blsp2_qup1_i2c_apps_clk.c, ""),
 	CLK_LOOKUP("core_clk", gcc_blsp2_qup1_spi_apps_clk.c, ""),
 	CLK_LOOKUP("core_clk", gcc_blsp2_qup2_i2c_apps_clk.c, ""),
-#if defined(CONFIG_LGE_BROADCAST_TDMB) || defined (CONFIG_LGE_BROADCAST_ONESEG)        /*  LGE_CHANGE_E, [1seg][youngbea.jung@lge.com], 2013-05-14, 1seg Bring up */
-        CLK_LOOKUP("core_clk", gcc_blsp2_qup2_spi_apps_clk.c, "f9964000.spi"),
+#if defined(CONFIG_LGE_BROADCAST_TDMB) || defined (CONFIG_LGE_BROADCAST_ONESEG)	/*  LGE_CHANGE_E, [1seg][youngbea.jung@lge.com], 2013-05-14, 1seg Bring up */
+	CLK_LOOKUP("core_clk", gcc_blsp2_qup2_spi_apps_clk.c, "f9964000.spi"),
 #else
 	CLK_LOOKUP("core_clk", gcc_blsp2_qup2_spi_apps_clk.c, ""),
 #endif /* LGE_BROADCAST */

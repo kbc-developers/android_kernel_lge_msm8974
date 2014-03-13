@@ -58,8 +58,7 @@
 
 #define MAX_BAM_DESCRIPTOR_COUNT	(8 * 1024 - 2)
 
-//#define TSPP_BUFFER_SIZE		(500 * 1024) /* 500KB */
-#define TSPP_BUFFER_SIZE (3 * 500 * 1024) /* max TSPP out buffer size is about 1.5MB, QCT, Customer Support Case Number: 01281530, 8/29/2013 */
+#define TSPP_BUFFER_SIZE		(500 * 1024) /* 500KB */
 
 #define TSPP_DESCRIPTOR_SIZE	(TSPP_RAW_TTS_SIZE)
 
@@ -87,10 +86,10 @@ enum mem_buffer_allocation_mode {
 static int clock_inv;
 static int tsif_mode = 2;
 
-/*                         */
+/* LGE_BROADCAST_FULLSEG { */
 //static int allocation_mode = MPQ_DMX_TSPP_INTERNAL_ALLOC;
 static int allocation_mode = MPQ_DMX_TSPP_CONTIGUOUS_PHYS_ALLOC;
-/*                         */
+/* LGE_BROADCAST_FULLSEG } */
 
 static int tspp_out_buffer_size = TSPP_BUFFER_SIZE;
 static int tspp_notification_size =

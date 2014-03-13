@@ -17,16 +17,11 @@ static struct sreadahead_prof prof_buf;
 //--------------------------------------------------------------
 static void prof_buf_free_work(struct work_struct *data)
 {
+	_DBG("mem of prof_buf is freed by vfree()");
 	mutex_lock(&prof_buf.ulock);
-	if (prof_buf.state == PROF_DONE) {
-		mutex_unlock(&prof_buf.ulock);
-		return;
-	}
-
 	prof_buf.state = PROF_NOT;
 	vfree(prof_buf.data);
 	prof_buf.data = NULL;
-	_DBG("mem of prof_buf is freed by vfree()");
 	mutex_unlock(&prof_buf.ulock);
 }
 
@@ -52,11 +47,6 @@ static ssize_t sreadahead_dbgfs_read(
 	struct sreadahead_profdata data;
 
 	mutex_lock(&prof_buf.ulock);
-	if (prof_buf.data == NULL) {
-		mutex_unlock(&prof_buf.ulock);
-		return 0;
-	}
-
 	if (prof_buf.read_cnt >= prof_buf.file_cnt) {
 		vfree(prof_buf.data);
 		prof_buf.data = NULL;
@@ -95,31 +85,15 @@ static ssize_t sreadaheadflag_dbgfs_write(
 		size_t count,
 		loff_t *ppos)
 {
-	int state;
-
-	if (copy_from_user(&state, buff, sizeof(int)))
+	if (copy_from_user(&prof_buf.state, buff, sizeof(int)))
 		return 0;
 
-	if (state == PROF_INIT) {
-		mutex_lock(&prof_buf.ulock);
-		_DBG("PROF_INT");
-		prof_buf.state = state;
-		mutex_unlock(&prof_buf.ulock);
-
-		_DBG("add timer");
+	if (prof_buf.state == PROF_INIT) {
+		_DBG("PROF_INT & add timer");
 		prof_buf.timer.expires = get_jiffies_64() + (PROF_TIMEOUT * HZ);
 		add_timer(&prof_buf.timer);
-	} else if (state == PROF_DONE) {
-		mutex_lock(&prof_buf.ulock);
-		if (prof_buf.state != PROF_RUN) {
-			mutex_unlock(&prof_buf.ulock);
-			return 0;
-		}
-		_DBG("PROF_DONE by user daemon(boot_completed)");
-		prof_buf.state = state;
-		mutex_unlock(&prof_buf.ulock);
-
-		_DBG("del timer");
+	} else if (prof_buf.state == PROF_DONE) {
+		_DBG("PROF_DONE by user daemon(boot_completed) & del timer");
 		del_timer(&prof_buf.timer);
 	}
 
@@ -185,7 +159,7 @@ static int get_absolute_path(unsigned char* buf, int buflen, struct file *filp)
 		tmpoldmnt = tmpmnt;
 		while (!IS_ROOT(tmpdentry)) {
 			strcpy(tmpstr, buf);
-			//                       
+			// byungchul.park@lge.com
 			// make codes robust
 			strncpy(buf, tmpdentry->d_name.name, buflen - 1);
 			buf[buflen - 1] = '\0';
@@ -206,7 +180,7 @@ static int get_absolute_path(unsigned char* buf, int buflen, struct file *filp)
 	} while (tmpmnt != tmpoldmnt);
 	strcpy(tmpstr, buf);
 	strcpy(buf, "/");
-	//                       
+	// byungchul.park@lge.com
 	// make codes robust
 	if (strlen(buf) + strlen(tmpstr) > buflen -1)
 		return -1;
@@ -231,11 +205,8 @@ static int sreadahead_prof_RUN(struct file *filp, size_t len, loff_t pos)
 
 	mutex_lock(&prof_buf.ulock);
 
-	/* vfree called or profiling is already done */
-	if (prof_buf.data == NULL || prof_buf.state != PROF_RUN) {
-		mutex_unlock(&prof_buf.ulock);
+	if (prof_buf.data == NULL) /* vfree called */
 		return -1;
-	}
 
 	for(i = 0; i < prof_buf.file_cnt; ++i){
 		if (strncmp(prof_buf.data[i].name, data.name, FILE_PATHLEN + FILE_NAMELEN) == 0){
@@ -243,7 +214,7 @@ static int sreadahead_prof_RUN(struct file *filp, size_t len, loff_t pos)
 		}
 	}
 	// add a new entry
-	if (i == prof_buf.file_cnt && i < PROF_BUF_SIZE){
+	if (i == prof_buf.file_cnt){
 		strncpy(prof_buf.data[i].procname, data.procname, PROC_NAMELEN);
 		prof_buf.data[i].procname[PROC_NAMELEN - 1] = '\0';
 		strncpy(prof_buf.data[i].name, data.name, FILE_PATHLEN + FILE_NAMELEN);
@@ -278,6 +249,7 @@ static int sreadahead_profdata_init(void)
 	if(prof_buf.state != PROF_INIT) {
 		mutex_unlock(&prof_buf.ulock);
 		return 0;
+
 	}
 
 	prof_buf.data = (struct sreadahead_profdata*)vmalloc(sizeof(struct sreadahead_profdata) * PROF_BUF_SIZE);

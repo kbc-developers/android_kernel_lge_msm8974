@@ -1800,7 +1800,7 @@ static void dwc3_chg_detect_work(struct work_struct *w)
 			mdwc->chg_state = USB_CHG_STATE_DETECTED;
 			delay = 0;
 		}
-/*                                                             */
+/* BEGIN : janghyun.baek@lge.com 2012-12-26 For cable detection*/
 #ifdef CONFIG_LGE_PM
 		lge_pm_read_cable_info();
 #ifdef CONFIG_BU52031NVX_CARKIT
@@ -1809,7 +1809,7 @@ static void dwc3_chg_detect_work(struct work_struct *w)
 			carkit_set_deskdock(1);
 #endif /* CONFIG_BU52031NVX_CARKIT */
 #endif
-/*                                        */
+/* END : janghyun.baek@lge.com 2012-12-26 */
 		break;
 	case USB_CHG_STATE_PRIMARY_DONE:
 		vout = dwc3_chg_det_check_output(mdwc);
@@ -1924,9 +1924,6 @@ static int dwc3_msm_suspend(struct dwc3_msm *mdwc)
 								(1 << 26));
 
 	usleep_range(1000, 1200);
-#ifdef CONFIG_SLIMPORT_ANX7808
-	if (!slimport_is_connected())
-#endif
 	clk_disable_unprepare(mdwc->ref_clk);
 
 	if (host_bus_suspend) {
@@ -2283,16 +2280,6 @@ static irqreturn_t msm_dwc3_irq(int irq, void *data)
 {
 	struct dwc3_msm *mdwc = data;
 
-#ifdef CONFIG_MACH_MSM8974_VU3_KR
-	enum dwc3_id_state id;
-
-	id = !!irq_read_line(mdwc->pmic_id_irq);
-	dev_dbg(mdwc->dev, "%s: hs_phy irq handler - id : %d\n", __func__, id);
-
-	if(id != DWC3_ID_GROUND)
-		return IRQ_HANDLED;
-
-#endif
 	if (atomic_read(&mdwc->in_lpm)) {
 		dev_dbg(mdwc->dev, "%s received in LPM\n", __func__);
 		mdwc->lpm_irq_seen = true;
@@ -2572,7 +2559,7 @@ static irqreturn_t dwc3_pmic_id_irq(int irq, void *data)
 	if (mdwc->id_state != id) {
 		mdwc->id_state = id;
 #ifdef CONFIG_LGE_PM
-		queue_delayed_work(system_nrt_wq, &mdwc->id_work, msecs_to_jiffies(500));
+		queue_delayed_work(system_nrt_wq, &mdwc->id_work, msecs_to_jiffies(100));
 #else
 		queue_work(system_nrt_wq, &mdwc->id_work);
 #endif
@@ -2668,25 +2655,6 @@ static ssize_t adc_enable_store(struct device *dev,
 static DEVICE_ATTR(adc_enable, S_IRUGO | S_IWUSR, adc_enable_show,
 		adc_enable_store);
 
-#ifdef CONFIG_SLIMPORT_ANX7808
-void dwc3_ref_clk_set(bool flag)
-{
-	struct dwc3_msm *mdwc = context;
-
-	if (!mdwc)
-		return;
-
-	if (flag) {
-		dev_info(mdwc->dev, "enable ref_clk\n");
-		clk_prepare_enable(mdwc->ref_clk);
-	}
-	else {
-		dev_info(mdwc->dev, "disable ref_clk\n");
-		clk_disable_unprepare(mdwc->ref_clk);
-	}
-}
-EXPORT_SYMBOL(dwc3_ref_clk_set);
-#endif
 static int __devinit dwc3_msm_probe(struct platform_device *pdev)
 {
 	struct device_node *node = pdev->dev.of_node;

@@ -654,10 +654,8 @@ static void ispif_process_irq(struct ispif_device *ispif,
 	if (out[vfe_id].ispifIrqStatus0 &
 			ISPIF_IRQ_STATUS_PIX_SOF_MASK) {
 		ispif->sof_count[vfe_id].sof_cnt[PIX0]++;
-/*                                                                  */
 		if(ispif->sof_count[vfe_id].sof_cnt[PIX0] <10)
 			pr_err(" %s : %d ",__func__,ispif->sof_count[vfe_id].sof_cnt[PIX0]);
-/*                                                                  */
 	}
 	if (out[vfe_id].ispifIrqStatus0 &
 			ISPIF_IRQ_STATUS_RDI0_SOF_MASK) {

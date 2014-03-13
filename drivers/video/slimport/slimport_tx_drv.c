@@ -160,15 +160,9 @@ static void sp_tx_link_phy_initialization(void)
 	sp_write_reg(TX_P1, SP_TX_LT_CTRL_REG15, 0x10);
 	sp_write_reg(TX_P1, SP_TX_LT_CTRL_REG18, 0x1F);
 	sp_write_reg(TX_P1, SP_TX_LT_CTRL_REG2, 0x3F);
-#if defined(CONFIG_MACH_MSM8974_Z_SKT) || defined(CONFIG_MACH_MSM8974_Z_LGU)
-	sp_write_reg(TX_P1, SP_TX_LT_CTRL_REG12, 0x0C);
-	sp_write_reg(TX_P1, SP_TX_LT_CTRL_REG6, 0x3C);
-	sp_write_reg(TX_P1, SP_TX_LT_CTRL_REG16, 0x1C);
-#else
 	sp_write_reg(TX_P1, SP_TX_LT_CTRL_REG12, 0x10);
 	sp_write_reg(TX_P1, SP_TX_LT_CTRL_REG6, 0x3B);
 	sp_write_reg(TX_P1, SP_TX_LT_CTRL_REG16, 0x1F);
-#endif
 	sp_write_reg(TX_P1, SP_TX_LT_CTRL_REG3, 0x3F);
 #else
 	sp_write_reg(TX_P1, SP_TX_LT_CTRL_REG0, val_SP_TX_LT_CTRL_REG0);  //before 0x19

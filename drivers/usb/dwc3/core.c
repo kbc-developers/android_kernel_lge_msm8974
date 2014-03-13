@@ -59,7 +59,8 @@
 
 #include "debug.h"
 
-#if defined(CONFIG_MACH_MSM8974_G2_DCM)\
+#if defined(CONFIG_MACH_MSM8974_G2_SPR)\
+	|| defined(CONFIG_MACH_MSM8974_G2_DCM)\
 	|| defined(CONFIG_MACH_MSM8974_G2_KDDI)\
 	|| defined(CONFIG_MACH_MSM8974_G2_OPEN_AME)\
 	|| defined(CONFIG_MACH_MSM8974_G2_OPEN_COM)\

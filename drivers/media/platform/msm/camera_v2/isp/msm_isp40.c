@@ -602,14 +602,14 @@ static void msm_vfe40_axi_cfg_comp_mask(struct vfe_device *vfe_dev,
 	comp_mask &= ~(0x7F << (comp_mask_index * 8));
 	comp_mask |= (axi_data->composite_info[comp_mask_index].
 		stream_composite_mask << (comp_mask_index * 8));
-/*                                                                            */
+/* QMC_PATCH_S, Fix preview split issue on 720p, 2013-07-05, jinw.kim@lge.com */
 #if 0  //QMC Original
 	if (stream_info->plane_cfg[0].plane_addr_offset)
 #else
 	if (stream_info->plane_cfg[0].plane_addr_offset &&
 			stream_info->stream_type == CONTINUOUS_STREAM)
 #endif
-/*                                                                            */
+/* QMC_PATCH_E, Fix preview split issue on 720p, 2013-07-05, jinw.kim@lge.com */
 		comp_mask |= (axi_data->composite_info[comp_mask_index].
 		stream_composite_mask << 24);
 	msm_camera_io_w(comp_mask, vfe_dev->vfe_base + 0x40);

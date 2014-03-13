@@ -58,16 +58,6 @@ mpath=`dirname $$mdpath`; rm -rf $$mpath;\
 fi
 endef
 
-# LGE_CHANGE_S [z/vmware/att,spr,tmux] donghoon.nam, 2013-09-12
-MVPD_MODULES := mvpkm.ko commkm.ko pvtcpkm.ko
-define rm-mvp-modules
-if [ "$(strip $(USES_VMWARE_VIRTUALIZATION))" = "true" ]\
-&& [ "$(strip $(USES_MVP_KERNEL_MODULES_LOAD_FROM_FS))" != "true" ];then\
-rm -f $(addprefix $(KERNEL_MODULES_OUT)/,$(MVPD_MODULES));\
-fi
-endef
-# LGE_CHANGE_E [z/vmware/att,spr,tmux] donghoon.nam, 2013-09-12
-
 $(KERNEL_OUT):
 	mkdir -p $(KERNEL_OUT)
 
@@ -97,12 +87,6 @@ $(KERNEL_CONFIG): $(KERNEL_OUT)
 	$(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=arm CROSS_COMPILE=arm-eabi- $(KERNEL_DEFCONFIG)
 ifneq ($(TARGET_BUILD_VARIANT), user)
 	echo "CONFIG_MMC_MSM_DEBUGFS=y" >> $(KERNEL_CONFIG)
-# LGE_CHANGE_S [z/vmware/att,spr,tmux] donghoon.nam, 2013-09-11
-ifeq ($(strip $(USES_VMWARE_VIRTUALIZATION)), true)
-	echo "CONFIG_VMWARE_MVP_DEBUG=y" >> $(KERNEL_CONFIG)
-	echo "CONFIG_VMWARE_PVTCP_DEBUG=y" >> $(KERNEL_CONFIG)
-endif
-# LGE_CHANGE_E [z/vmware/att,spr,tmux] donghoon.nam, 2013-09-11
 endif
 
 # LGE_CHANGE_S
@@ -134,9 +118,6 @@ ifeq ($(PRODUCT_SUPPORT_EXFAT), y)
 endif
 	$(mv-modules)
 	$(clean-module-folder)
-# LGE_CHANGE_S [z/vmware/att,spr,tmux] donghoon.nam, 2013-09-12
-	$(rm-mvp-modules)
-# LGE_CHANGE_E [z/vmware/att,spr,tmux] donghoon.nam, 2013-09-12
 	$(append-dtb)
 
 $(KERNEL_HEADERS_INSTALL): $(KERNEL_OUT) $(KERNEL_CONFIG)

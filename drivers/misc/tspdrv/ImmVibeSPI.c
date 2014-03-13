@@ -45,8 +45,6 @@
 #include <linux/of_gpio.h>
 #include <mach/board_lge.h>
 
-#include <linux/zwait.h>
-
 /* When use SM100 with GP_CLK
   175Hz motor : 22.4KHz - M=1, N=214 ,
   205Hz motor : 26.24Khz - M=1, N=183 ,
@@ -79,7 +77,7 @@ static void __iomem *virt_bases_v = NULL;
 #define GP_CLK_ID				0 /* gp clk 0 */
 #define GP_CLK_M_DEFAULT		1
 #if defined(CONFIG_MACH_MSM8974_VU3_KR)
-#define GP_CLK_N_DEFAULT		82
+#define GP_CLK_N_DEFAULT		110
 #else
 #define GP_CLK_N_DEFAULT		92
 #endif
@@ -277,10 +275,10 @@ static int android_vibrator_probe(struct platform_device *pdev)
 		clk_set_rate(cam_gp1_clk, 22222);
 	}
 #elif defined(CONFIG_MACH_MSM8974_VU3_KR)
-		mmss_cc_n_default = 82; 	/* for 230Hz motor */
+		mmss_cc_n_default = 110; 	/* for 230Hz motor */
 		mmss_cc_d_max = mmss_cc_n_default;
 		mmss_cc_d_half = (mmss_cc_n_default >> 1);
-		clk_set_rate(cam_gp1_clk, 29268);
+		clk_set_rate(cam_gp1_clk, 29090);
 #elif defined(CONFIG_MACH_MSM8974_Z_KR) || defined(CONFIG_MACH_MSM8974_Z_US)
 	if(lge_get_board_revno() >= HW_REV_B) {
 		mmss_cc_n_default = 82; 	/* for 230Hz motor */
@@ -462,9 +460,6 @@ EXPORT_SYMBOL(ImmVibeSPI_ForceOut_AmpDisable);
 ** Called to enable amp (enable output force)
 */
 /*IMMVIBESPIAPI*/ VibeStatus ImmVibeSPI_ForceOut_AmpEnable(VibeUInt8 nActuatorIndex)
-    if (is_zw_mode())
-	return VIBE_S_SUCCESS;
-
 {
     if (!g_bAmpEnabled)
     {

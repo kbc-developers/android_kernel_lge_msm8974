@@ -466,20 +466,15 @@ void diag_smd_send_req(struct diag_smd_info *smd_info)
       if (smd_info->ch && !buf &&
 		(driver->logging_mode == DM_DEV_MODE)) {
 //			chk_logging_wakeup();
-/*                                                                                                 */
 	  	  lge_dm_dev_tty->set_logging = 1;
 		  wake_up_interruptible(&lge_dm_dev_tty->waitq);
-/*                                                                                                 */
 	}
 
       if (smd_info->ch && !buf &&
 		(driver->logging_mode == DM_APP_MODE)) {
 //			chk_logging_wakeup();
-/*                                                                                                 */
 	  	  lge_dm_tty->set_logging = 1;
 		  wake_up_interruptible(&lge_dm_tty->waitq);
-/*                                                                                                 */
-
 	}
 
 }
@@ -865,8 +860,6 @@ extern int get_diag_enable(void);
 #define	COMMAND_WEB_DOWNLOAD	    0xEF
 #define	COMMAND_ASYNC_HDLC_FLAG	    0x7E
 #define COMMAND_DLOAD_RESET	    0x3A
-#define COMMAND_TEST_MODE		0xFA
-#define COMMAND_TEST_MODE_RESET	0x29
 
 int is_filtering_command(char *buf)
 {
@@ -887,12 +880,6 @@ int is_filtering_command(char *buf)
 	case COMMAND_DLOAD_RESET :
 	    ret = 1;
 	    break;
-	case COMMAND_TEST_MODE :
-		ret = 1;
-		break;
-	case COMMAND_TEST_MODE_RESET :
-		ret = 1;
-		break;
 	default:
 	    ret = 0;
 	    break;
