@@ -885,8 +885,9 @@ void __init mem_init(void)
 		   MLM(VMALLOC_START, VMALLOC_END),
 		   MLM(PAGE_OFFSET, (unsigned long)high_memory));
 #endif
-#ifdef CONFIG_HIGHMEM
+
 	printk(KERN_NOTICE
+#ifdef CONFIG_HIGHMEM
 		   "    pkmap   : 0x%08lx - 0x%08lx   (%4ld MB)\n"
 #endif
 #ifdef CONFIG_MODULES
@@ -949,6 +950,14 @@ void free_initmem(void)
 				    "TCM link");
 #endif
 
+#ifdef CONFIG_STRICT_MEMORY_RWX
+	poison_init_mem((char *)__arch_info_begin,
+		__init_end - (char *)__arch_info_begin);
+	reclaimed_initmem = free_area(__phys_to_pfn(__pa(__arch_info_begin)),
+				    __phys_to_pfn(__pa(__init_end)),
+				    "init");
+	totalram_pages += reclaimed_initmem;
+#else
 	poison_init_mem(__init_begin, __init_end - __init_begin);
 	if (!machine_is_integrator() && !machine_is_cintegrator()) {
 		reclaimed_initmem = free_area(__phys_to_pfn(__pa(__init_begin)),
@@ -956,6 +965,7 @@ void free_initmem(void)
 					    "init");
 		totalram_pages += reclaimed_initmem;
 	}
+#endif
 }
 
 #ifdef CONFIG_BLK_DEV_INITRD
