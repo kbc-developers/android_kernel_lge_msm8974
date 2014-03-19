@@ -47,7 +47,8 @@ make_cwm_image()
     mkdir -p ./tmp/META-INF/com/google/android
     cp $IMAGE_NAME.img ./tmp/
     cp $KERNEL_DIR/release-tools/update-binary ./tmp/META-INF/com/google/android/
-    cp $KERNEL_DIR/release-tools/loki ./tmp/loki
+    cp -av $KERNEL_DIR/release-tools/loki ./tmp/loki
+    rm ./tmp/loki/.gitignore
     sed -e "s/@VERSION/$BUILD_LOCALVERSION/g" $KERNEL_DIR/release-tools/$TARGET_DEVICE/updater-script.sed | sed -e "s/@IMAGE/$IMAGE_NAME/g" > ./tmp/META-INF/com/google/android/updater-script
     cd tmp && zip -rq ../cwm.zip ./* && cd ../
     SIGNAPK_DIR=$KERNEL_DIR/release-tools/signapk
