@@ -89,7 +89,6 @@ cp $OBJ_DIR/arch/arm/boot/zImage $BIN_DIR/kernel
 
 if [ "$KERNEL_SEPARATED_DT" = 'y' ]; then
 make_boot_dt_image
-exit
 else
 make_boot_image
 fi
@@ -111,7 +110,7 @@ cd $BIN_DIR
 #make_odin3_image
 
 # create cwm image
-#make_cwm_image
+make_cwm_image
 
 cd $KERNEL_DIR
 
