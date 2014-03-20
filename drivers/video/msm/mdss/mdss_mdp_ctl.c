@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -211,7 +211,14 @@ int mdss_mdp_perf_calc_pipe(struct mdss_mdp_pipe *pipe,
 
 	quota = fps * pipe->src.w * src_h;
 	if (pipe->src_fmt->chroma_sample == MDSS_MDP_CHROMA_420)
-		quota = (quota * 3) / 2;
+		/*
+		 * with decimation, chroma is not downsampled, this means we
+		 * need to allocate bw for extra lines that will be fetched
+		 */
+		if (pipe->vert_deci)
+			quota *= 2;
+		else
+			quota = (quota * 3) / 2;
 	else
 		quota *= pipe->src_fmt->bpp;
 
@@ -1426,6 +1433,8 @@ static int mdss_mdp_mixer_setup(struct mdss_mdp_ctl *ctl,
 
 	if (mixer->num == MDSS_MDP_INTF_LAYERMIXER3)
 		ctl->flush_bits |= BIT(20);
+	else if (mixer->type == MDSS_MDP_MIXER_TYPE_WRITEBACK)
+		ctl->flush_bits |= BIT(9) << mixer->num;
 	else
 		ctl->flush_bits |= BIT(6) << mixer->num;
 
@@ -1767,6 +1776,11 @@ int mdss_mdp_display_wait4comp(struct mdss_mdp_ctl *ctl)
 {
 	int ret;
 
+	if (!ctl) {
+		pr_err("invalid ctl\n");
+		return -ENODEV;
+	}
+
 	ret = mutex_lock_interruptible(&ctl->lock);
 	if (ret)
 		return ret;
@@ -1803,7 +1817,7 @@ int mdss_mdp_display_wait4pingpong(struct mdss_mdp_ctl *ctl)
 	}
 
 	if (ctl->wait_pingpong)
-		ret = ctl->wait_pingpong(ctl, NULL);
+		ret = ctl->wait_pingpong(ctl, (void*) 1);
 
 	mutex_unlock(&ctl->lock);
 
@@ -1863,7 +1877,7 @@ int mdss_mdp_display_commit(struct mdss_mdp_ctl *ctl, void *arg)
 	mdss_mdp_ctl_notify(ctl, MDP_NOTIFY_FRAME_READY);
 
 	if (ctl->wait_pingpong)
-		ctl->wait_pingpong(ctl, NULL);
+		ctl->wait_pingpong(ctl, (void*) 0);
 
 	/* postprocessing setup, including dspp */
 	mdss_mdp_pp_setup_locked(ctl);
