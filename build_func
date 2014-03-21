@@ -46,6 +46,7 @@ make_cwm_image()
     fi
     mkdir -p ./tmp/META-INF/com/google/android
     cp $IMAGE_NAME.img ./tmp/
+    cp $KERNEL_DIR/release-tools/file_contexts ./tmp/file_contexts
     cp $KERNEL_DIR/release-tools/update-binary ./tmp/META-INF/com/google/android/
     cp -av $KERNEL_DIR/release-tools/loki ./tmp/loki
     rm ./tmp/loki/.gitignore
