@@ -2280,6 +2280,16 @@ static irqreturn_t msm_dwc3_irq(int irq, void *data)
 {
 	struct dwc3_msm *mdwc = data;
 
+#if defined(CONFIG_MACH_MSM8974_VU3_KR) || defined(CONFIG_MACH_MSM8974_G2_KDDI)
+	enum dwc3_id_state id;
+
+	id = !!irq_read_line(mdwc->pmic_id_irq);
+	dev_dbg(mdwc->dev, "%s: hs_phy irq handler - id : %d\n", __func__, id);
+
+	if(id != DWC3_ID_GROUND)
+		return IRQ_HANDLED;
+
+#endif
 	if (atomic_read(&mdwc->in_lpm)) {
 		dev_dbg(mdwc->dev, "%s received in LPM\n", __func__);
 		mdwc->lpm_irq_seen = true;

@@ -38,6 +38,15 @@ static struct batt_temp_table chg_temp_table[CHG_MAXIDX] = {
 	{     46,        53,    CHG_BATTEMP_46_OT},
 	{     54,   INT_MAX,    CHG_BATTEMP_AB_OT},
 };
+#elif defined (CONFIG_MACH_MSM8974_G2_KDDI)
+static struct batt_temp_table chg_temp_table[CHG_MAXIDX] = {
+	{INT_MIN,       -11,    CHG_BATTEMP_BL_M11},
+	{    -10,        -5,    CHG_BATTEMP_M10_M5},
+	{     -4,        42,    CHG_BATTEMP_M4_41},
+	{     43,        45,    CHG_BATTEMP_42_45},
+	{     46,        55,    CHG_BATTEMP_46_OT},
+	{     56,   INT_MAX,    CHG_BATTEMP_AB_OT},
+};
 #else
 static struct batt_temp_table chg_temp_table[CHG_MAXIDX] = {
 	{INT_MIN,       -11,    CHG_BATTEMP_BL_M11},
