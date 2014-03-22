@@ -225,6 +225,8 @@ static int max17048_get_capacity_from_soc(void)
 						/(9400-(ref->model_data->empty))*10000;
 #elif defined (CONFIG_MACH_MSM8974_Z_KR) || defined(CONFIG_MACH_MSM8974_Z_US) || defined(CONFIG_MACH_MSM8974_Z_KDDI)
 	batt_soc = batt_soc/94*100+10000000;
+#elif defined (CONFIG_MACH_MSM8974_G2_KDDI)
+	batt_soc = (batt_soc-20000000)/(96-2)*100;
 #else
 	batt_soc = batt_soc/94*100;
 #endif
@@ -425,6 +427,8 @@ static void max17048_polling_work(struct work_struct *work)
 						/(9400-(ref->model_data->empty))*10000;
 #elif defined (CONFIG_MACH_MSM8974_Z_KR) || defined(CONFIG_MACH_MSM8974_Z_US) || defined(CONFIG_MACH_MSM8974_Z_KDDI)
 		capacity = capacity/94*100 + 10000000;
+#elif defined (CONFIG_MACH_MSM8974_G2_KDDI)
+		capacity = (capacity-20000000)/(96-2)*100;
 #else
 		capacity = capacity/94*100;
 #endif

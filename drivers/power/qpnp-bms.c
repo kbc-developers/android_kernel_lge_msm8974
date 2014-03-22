@@ -26,7 +26,7 @@
 #include <linux/qpnp/qpnp-adc.h>
 #include <linux/qpnp/power-on.h>
 #include <linux/mfd/pm8xxx/batterydata-lib.h>
-#ifdef CONFIG_MACH_MSM8974_VU3_KR
+#if defined(CONFIG_MACH_MSM8974_VU3_KR) || defined(CONFIG_MACH_MSM8974_G2_KDDI)
 #define EXTERNAL_FUELGAUGE
 #endif
 /* BMS Register Offsets */
@@ -223,11 +223,11 @@ static struct of_device_id qpnp_bms_match_table[] = {
 	{ .compatible = QPNP_BMS_DEV_NAME },
 	{}
 };
-
+#ifndef EXTERNAL_FUELGAUGE
 static char *qpnp_bms_supplicants[] = {
 	"battery"
 };
-
+#endif
 static enum power_supply_property msm_bms_power_props[] = {
 #ifndef EXTERNAL_FUELGAUGE
 	POWER_SUPPLY_PROP_CAPACITY,
@@ -3032,10 +3032,9 @@ static int __devinit qpnp_bms_probe(struct spmi_device *spmi)
 #ifndef EXTERNAL_FUELGAUGE
 	chip->bms_psy.external_power_changed =
 		qpnp_bms_external_power_changed;
-#endif
 	chip->bms_psy.supplied_to = qpnp_bms_supplicants;
 	chip->bms_psy.num_supplicants = ARRAY_SIZE(qpnp_bms_supplicants);
-
+#endif
 	rc = power_supply_register(chip->dev, &chip->bms_psy);
 
 	if (rc < 0) {
