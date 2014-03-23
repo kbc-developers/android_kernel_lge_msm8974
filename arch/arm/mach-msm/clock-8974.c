@@ -4870,7 +4870,7 @@ static struct clk_lookup msm_clocks_8974[] = {
 	CLK_LOOKUP("xo",	cxo_a2.c,	"spi101.0"),
 #endif
 #endif /* LGE_BROADCAST */ 
-#if defined(CONFIG_LGE_BROADCAST_ONESEG) && (defined(CONFIG_MACH_MSM8974_G2_KDDI) || defined(CONFIG_MACH_MSM8974_G2_DCM))
+#if defined(CONFIG_LGE_BROADCAST_ONESEG)
 		CLK_LOOKUP("xo",	cxo_a2.c,	"spi8.0"),
 #endif /* LGE_BROADCAST ONESEG */
 
@@ -4935,7 +4935,7 @@ static struct clk_lookup msm_clocks_8974[] = {
 #ifdef CONFIG_LGE_BLUETOOTH
 	CLK_LOOKUP("iface_clk", gcc_blsp2_ahb_clk.c, "f9960000.uart"),
 #endif
-#if defined(CONFIG_LGE_BROADCAST_TDMB) || (defined(CONFIG_LGE_BROADCAST_ONESEG) && (defined(CONFIG_MACH_MSM8974_G2_KDDI) || defined(CONFIG_MACH_MSM8974_G2_DCM)))
+#if defined(CONFIG_LGE_BROADCAST_TDMB) || defined (CONFIG_LGE_BROADCAST_ONESEG)
 	CLK_LOOKUP("iface_clk", gcc_blsp2_ahb_clk.c, "f9964000.spi"),
 #endif /* LGE_BROADCAST */
 #ifdef CONFIG_LGE_IRRC
@@ -4946,7 +4946,7 @@ static struct clk_lookup msm_clocks_8974[] = {
 	CLK_LOOKUP("core_clk", gcc_blsp2_qup1_i2c_apps_clk.c, ""),
 	CLK_LOOKUP("core_clk", gcc_blsp2_qup1_spi_apps_clk.c, ""),
 	CLK_LOOKUP("core_clk", gcc_blsp2_qup2_i2c_apps_clk.c, ""),
-#if defined(CONFIG_LGE_BROADCAST_TDMB) || (defined(CONFIG_LGE_BROADCAST_ONESEG) && (defined(CONFIG_MACH_MSM8974_G2_KDDI) || defined(CONFIG_MACH_MSM8974_G2_DCM)))
+#if defined(CONFIG_LGE_BROADCAST_TDMB) || defined (CONFIG_LGE_BROADCAST_ONESEG)	/*  LGE_CHANGE_E, [1seg][youngbea.jung@lge.com], 2013-05-14, 1seg Bring up */
 	CLK_LOOKUP("core_clk", gcc_blsp2_qup2_spi_apps_clk.c, "f9964000.spi"),
 #else
 	CLK_LOOKUP("core_clk", gcc_blsp2_qup2_spi_apps_clk.c, ""),

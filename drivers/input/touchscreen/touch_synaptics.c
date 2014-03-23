@@ -726,6 +726,8 @@ static int read_page_description_table(struct i2c_client *client)
 }
 
 #ifdef CUST_G2_TOUCH
+#if !defined(CONFIG_MACH_MSM8974_G2_KDDI)
+
 int synaptics_ts_power(struct i2c_client *client, int power_ctrl);
 int get_bootloader_fw_ver(struct synaptics_ts_data* ts, struct touch_fw_info* fw_info)
 {
@@ -891,9 +893,6 @@ int set_fw_info(struct synaptics_ts_data* ts, struct touch_fw_info* fw_info)
 {
 	fw_info->fw_setting.ic_chip_rev = get_ic_chip_rev(ts, fw_info);
 
-#if defined(CONFIG_MACH_MSM8974_G2_KDDI)
-    return 0;
-#else
 	memset(&SynaFirmware,0x00,sizeof(SynaFirmware));
 
 #ifdef CONFIG_MACH_MSM8974_G2_OPEN_COM
@@ -976,9 +975,8 @@ int set_fw_info(struct synaptics_ts_data* ts, struct touch_fw_info* fw_info)
 #endif
 
 	return 0;
-#endif
 }
-
+#endif
 #endif
 int get_ic_info(struct synaptics_ts_data* ts, struct touch_fw_info* fw_info)
 {
@@ -992,11 +990,12 @@ int get_ic_info(struct synaptics_ts_data* ts, struct touch_fw_info* fw_info)
 #else
 	u8 flash_control = 0;
 #endif
+#if !defined(CONFIG_MACH_MSM8974_G2_KDDI)
 
 	if(unlikely(set_fw_info(ts, fw_info) < 0)) {
 		return -1;
 	}
-
+#endif
 	read_page_description_table(ts->client);
 
 	memset(&ts->fw_info, 0, sizeof(struct synaptics_ts_fw_info));
