@@ -224,12 +224,6 @@ static int __mdss_mdp_rotator_to_pipe(struct mdss_mdp_rotator_session *rot,
 	pipe->params_changed++;
 	rot->params_changed = 0;
 
-	/*
-	 * Clear previous SMP reservations and reserve according
-	 * to the latest configuration
-	 */
-	mdss_mdp_smp_unreserve(pipe);
-
 	ret = mdss_mdp_smp_reserve(pipe);
 	if (ret) {
 		pr_err("unable to mdss_mdp_smp_reserve rot data\n");
@@ -306,20 +300,15 @@ static void mdss_mdp_rotator_commit_wq_handler(struct work_struct *work)
 
 	mutex_lock(&rotator_lock);
 	ret = mdss_mdp_rotator_queue_helper(rot);
-
-	atomic_inc(&rot->rot_sync_pt_data->commit_cnt);
-
-	ret = mdss_mdp_rotator_queue_helper(rot);
-	if (ret) {
+	if (ret)
 		pr_err("rotator queue failed\n");
-		mutex_unlock(&rotator_lock);
-		return;
-	}
 
-	if (rot->rot_sync_pt_data)
+	if (rot->rot_sync_pt_data) {
+		atomic_inc(&rot->rot_sync_pt_data->commit_cnt);
 		mdss_fb_signal_timeline(rot->rot_sync_pt_data);
-	else
+	} else {
 		pr_err("rot_sync_pt_data is NULL\n");
+	}
 
 	mutex_unlock(&rotator_lock);
 }

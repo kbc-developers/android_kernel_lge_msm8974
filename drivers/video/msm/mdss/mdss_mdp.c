@@ -537,6 +537,8 @@ static int mdss_mdp_clk_update(u32 clk_idx, u32 enable)
 	if (clk) {
 		pr_debug("clk=%d en=%d\n", clk_idx, enable);
 		if (enable) {
+			if (clk_idx == MDSS_CLK_MDP_VSYNC)
+				clk_set_rate(clk, 19200000);
 			ret = clk_prepare_enable(clk);
 		} else {
 			clk_disable_unprepare(clk);
@@ -638,6 +640,7 @@ void mdss_bus_bandwidth_ctrl(int enable)
 		if (!enable) {
 			msm_bus_scale_client_update_request(
 				mdata->bus_hdl, 0);
+			mdss_iommu_dettach(mdata);
 			pm_runtime_put(&mdata->pdev->dev);
 		} else {
 			pm_runtime_get_sync(&mdata->pdev->dev);
@@ -985,6 +988,8 @@ static ssize_t mdss_mdp_show_capabilities(struct device *dev,
 		SPRINT(" bwc");
 	if (mdata->has_decimation)
 		SPRINT(" decimation");
+	if (mdata->highest_bank_bit)
+		SPRINT(" tile_format");
 	SPRINT("\n");
 
 	return cnt;
@@ -1723,6 +1728,11 @@ static int mdss_mdp_parse_dt_misc(struct platform_device *pdev)
 		"qcom,mdss-has-decimation");
 	mdata->has_wfd_blk = of_property_read_bool(pdev->dev.of_node,
 		"qcom,mdss-has-wfd-blk");
+	rc = of_property_read_u32(pdev->dev.of_node,
+		 "qcom,mdss-highest-bank-bit", &(mdata->highest_bank_bit));
+	if (rc)
+		pr_debug("Could not read optional property: highest bank bit\n");
+
 	return 0;
 }
 
@@ -1898,11 +1908,12 @@ static int mdss_mdp_resume(struct platform_device *pdev)
 static int mdss_mdp_runtime_resume(struct device *dev)
 {
 	struct mdss_data_type *mdata = dev_get_drvdata(dev);
+	bool device_on = true;
 	if (!mdata)
 		return -ENODEV;
 
 	dev_dbg(dev, "pm_runtime: resuming...\n");
-
+	device_for_each_child(dev, &device_on, mdss_fb_suspres_panel);
 	mdss_mdp_footswitch_ctrl(mdata, true);
 
 	return 0;
@@ -1922,6 +1933,7 @@ static int mdss_mdp_runtime_idle(struct device *dev)
 static int mdss_mdp_runtime_suspend(struct device *dev)
 {
 	struct mdss_data_type *mdata = dev_get_drvdata(dev);
+	bool device_on = false;
 	if (!mdata)
 		return -ENODEV;
 	dev_dbg(dev, "pm_runtime: suspending...\n");
@@ -1930,6 +1942,7 @@ static int mdss_mdp_runtime_suspend(struct device *dev)
 		pr_err("MDP suspend failed\n");
 		return -EBUSY;
 	}
+	device_for_each_child(dev, &device_on, mdss_fb_suspres_panel);
 	mdss_mdp_footswitch_ctrl(mdata, false);
 
 	return 0;

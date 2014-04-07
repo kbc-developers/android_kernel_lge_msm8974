@@ -682,25 +682,13 @@ int mdss_mdp_wb_mixer_destroy(struct mdss_mdp_mixer *mixer)
 	return 0;
 }
 
-void mdss_mdp_ctl_splash_start(struct mdss_panel_data *pdata)
-{
-	switch (pdata->panel_info.type) {
-	case MIPI_VIDEO_PANEL:
-		mdss_mdp_video_copy_splash_screen(pdata);
-		break;
-	case MIPI_CMD_PANEL:
-	default:
-		break;
-	}
-}
-
-int mdss_mdp_ctl_splash_finish(struct mdss_mdp_ctl *ctl)
+int mdss_mdp_ctl_splash_finish(struct mdss_mdp_ctl *ctl, bool handoff)
 {
 	switch (ctl->panel_data->panel_info.type) {
 	case MIPI_VIDEO_PANEL:
-		return mdss_mdp_video_reconfigure_splash_done(ctl);
+		return mdss_mdp_video_reconfigure_splash_done(ctl, handoff);
 	case MIPI_CMD_PANEL:
-		return mdss_mdp_cmd_reconfigure_splash_done(ctl);
+		return mdss_mdp_cmd_reconfigure_splash_done(ctl, handoff);
 	default:
 		return 0;
 	}
@@ -807,6 +795,7 @@ int mdss_mdp_ctl_setup(struct mdss_mdp_ctl *ctl)
 
 	ctl->width = width;
 	ctl->height = height;
+	ctl->roi = (struct mdss_mdp_img_rect) {0, 0, width, height};
 
 	if (!ctl->mixer_left) {
 		ctl->mixer_left =
@@ -825,6 +814,7 @@ int mdss_mdp_ctl_setup(struct mdss_mdp_ctl *ctl)
 
 	ctl->mixer_left->width = width;
 	ctl->mixer_left->height = height;
+	ctl->mixer_left->roi = (struct mdss_mdp_img_rect) {0, 0, width, height};
 
 	if (split_ctl) {
 		pr_debug("split display detected\n");
@@ -847,6 +837,8 @@ int mdss_mdp_ctl_setup(struct mdss_mdp_ctl *ctl)
 		}
 		ctl->mixer_right->width = width;
 		ctl->mixer_right->height = height;
+		ctl->mixer_right->roi = (struct mdss_mdp_img_rect)
+						{0, 0, width, height};
 	} else if (ctl->mixer_right) {
 		mdss_mdp_mixer_free(ctl->mixer_right);
 		ctl->mixer_right = NULL;
@@ -1138,7 +1130,7 @@ int mdss_mdp_ctl_intf_event(struct mdss_mdp_ctl *ctl, int event, void *arg)
 	return rc;
 }
 
-static int mdss_mdp_ctl_start_sub(struct mdss_mdp_ctl *ctl)
+static int mdss_mdp_ctl_start_sub(struct mdss_mdp_ctl *ctl, bool handoff)
 {
 	struct mdss_mdp_mixer *mixer;
 	u32 outsize, temp;
@@ -1149,22 +1141,33 @@ static int mdss_mdp_ctl_start_sub(struct mdss_mdp_ctl *ctl)
        yres_margin = ctl->panel_data->panel_info.lcdc.yres_margin;
 #endif
 
-	if (ctl->start_fnc)
-		ret = ctl->start_fnc(ctl);
-	else
-		pr_warn("no start function for ctl=%d type=%d\n", ctl->num,
-				ctl->panel_data->panel_info.type);
+	pr_debug("ctl_num=%d\n", ctl->num);
 
-	if (ret) {
-		pr_err("unable to start intf\n");
-		return ret;
+	/*
+	 * Need start_fnc in 2 cases:
+	 * (1) handoff
+	 * (2) continuous splash finished.
+	 */
+	if (handoff || !ctl->panel_data->panel_info.cont_splash_enabled) {
+		if (ctl->start_fnc)
+			ret = ctl->start_fnc(ctl);
+		else
+			pr_warn("no start function for ctl=%d type=%d\n",
+					ctl->num,
+					ctl->panel_data->panel_info.type);
+
+		if (ret) {
+			pr_err("unable to start intf\n");
+			return ret;
+		}
 	}
 
-	pr_info("ctl_num=%d\n", ctl->num);
-
-	nmixers = MDSS_MDP_INTF_MAX_LAYERMIXER + MDSS_MDP_WB_MAX_LAYERMIXER;
-	for (i = 0; i < nmixers; i++)
-		mdss_mdp_ctl_write(ctl, MDSS_MDP_REG_CTL_LAYER(i), 0);
+	if (!ctl->panel_data->panel_info.cont_splash_enabled) {
+		nmixers = MDSS_MDP_INTF_MAX_LAYERMIXER +
+			MDSS_MDP_WB_MAX_LAYERMIXER;
+		for (i = 0; i < nmixers; i++)
+			mdss_mdp_ctl_write(ctl, MDSS_MDP_REG_CTL_LAYER(i), 0);
+	}
 
 	mixer = ctl->mixer_left;
 	mdss_mdp_pp_resume(ctl, mixer->num);
@@ -1192,7 +1195,7 @@ static int mdss_mdp_ctl_start_sub(struct mdss_mdp_ctl *ctl)
 	return ret;
 }
 
-int mdss_mdp_ctl_start(struct mdss_mdp_ctl *ctl)
+int mdss_mdp_ctl_start(struct mdss_mdp_ctl *ctl, bool handoff)
 {
 	struct mdss_mdp_ctl *sctl;
 	int ret = 0;
@@ -1206,12 +1209,17 @@ int mdss_mdp_ctl_start(struct mdss_mdp_ctl *ctl)
 	if (ret)
 		return ret;
 
-
 	sctl = mdss_mdp_get_split_ctl(ctl);
 
 	mutex_lock(&ctl->lock);
 
-	ctl->power_on = true;
+	/*
+	 * keep power_on false during handoff to avoid unexpected
+	 * operations to overlay.
+	 */
+	if (!handoff)
+		ctl->power_on = true;
+
 	memset(&ctl->cur_perf, 0, sizeof(ctl->cur_perf));
 
 	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON, false);
@@ -1222,10 +1230,10 @@ int mdss_mdp_ctl_start(struct mdss_mdp_ctl *ctl)
 		goto error;
 	}
 
-	ret = mdss_mdp_ctl_start_sub(ctl);
+	ret = mdss_mdp_ctl_start_sub(ctl, handoff);
 	if (ret == 0) {
 		if (sctl) { /* split display is available */
-			ret = mdss_mdp_ctl_start_sub(sctl);
+			ret = mdss_mdp_ctl_start_sub(sctl, handoff);
 			if (!ret)
 				mdss_mdp_ctl_split_display_enable(1, ctl, sctl);
 		} else if (ctl->mixer_right) {
@@ -1308,6 +1316,48 @@ int mdss_mdp_ctl_stop(struct mdss_mdp_ctl *ctl)
 	return ret;
 }
 
+void mdss_mdp_set_roi(struct mdss_mdp_ctl *ctl,
+		struct mdp_display_commit *data)
+{
+	struct mdss_mdp_img_rect temp_roi, mixer_roi;
+
+	temp_roi.x = data->roi.x;
+	temp_roi.y = data->roi.y;
+	temp_roi.w = data->roi.w;
+	temp_roi.h = data->roi.h;
+
+	/*
+	 * No Partial Update for:
+	 * 1) dual DSI panels
+	 * 2) non-cmd mode panels
+	*/
+	if (!temp_roi.w || !temp_roi.h || ctl->mixer_right ||
+			(ctl->panel_data->panel_info.type != MIPI_CMD_PANEL) ||
+			!ctl->panel_data->panel_info.partial_update_enabled) {
+		temp_roi = (struct mdss_mdp_img_rect)
+				{0, 0, ctl->mixer_left->width,
+					ctl->mixer_left->height};
+	}
+
+	ctl->roi_changed = 0;
+	if (((temp_roi.x != ctl->roi.x) ||
+			(temp_roi.y != ctl->roi.y)) ||
+			((temp_roi.w != ctl->roi.w) ||
+			 (temp_roi.h != ctl->roi.h))) {
+		ctl->roi = temp_roi;
+		ctl->roi_changed++;
+
+		mixer_roi = ctl->mixer_left->roi;
+		if ((mixer_roi.w != temp_roi.w) ||
+			(mixer_roi.h != temp_roi.h)) {
+			ctl->mixer_left->roi = temp_roi;
+			ctl->mixer_left->params_changed++;
+		}
+	}
+	pr_debug("ROI requested: [%d, %d, %d, %d]\n",
+			ctl->roi.x, ctl->roi.y, ctl->roi.w, ctl->roi.h);
+}
+
 static int mdss_mdp_mixer_setup(struct mdss_mdp_ctl *ctl,
 				struct mdss_mdp_mixer *mixer)
 {
@@ -1316,11 +1366,15 @@ static int mdss_mdp_mixer_setup(struct mdss_mdp_ctl *ctl,
 	u32 mixercfg = 0, blend_color_out = 0, bg_alpha_enable = 0;
 	u32 fg_alpha = 0, bg_alpha = 0;
 	int stage, secure = 0;
+	int outsize = 0;
 
 	if (!mixer)
 		return -ENODEV;
 
 	pr_debug("setup mixer=%d\n", mixer->num);
+
+	outsize = (mixer->roi.h << 16) | mixer->roi.w;
+	mdp_mixer_write(mixer, MDSS_MDP_REG_LM_OUT_SIZE, outsize);
 
 	pipe = mixer->stage_pipe[MDSS_MDP_STAGE_BASE];
 	if (pipe == NULL) {
@@ -1584,13 +1638,9 @@ struct mdss_mdp_pipe *mdss_mdp_mixer_stage_pipe(struct mdss_mdp_ctl *ctl,
 	if (!ctl)
 		return NULL;
 
-	if (mutex_lock_interruptible(&ctl->lock))
-		return NULL;
-
 	mixer = mdss_mdp_mixer_get(ctl, mux);
 	if (mixer)
 		pipe = mixer->stage_pipe[stage];
-	mutex_unlock(&ctl->lock);
 
 	return pipe;
 }
@@ -1661,14 +1711,10 @@ int mdss_mdp_mixer_pipe_unstage(struct mdss_mdp_pipe *pipe)
 	pr_debug("unstage pnum=%d stage=%d mixer=%d\n", pipe->num,
 			pipe->mixer_stage, mixer->num);
 
-	if (mutex_lock_interruptible(&ctl->lock))
-		return -EINTR;
-
 	if (pipe == mixer->stage_pipe[pipe->mixer_stage]) {
 		mixer->params_changed++;
 		mixer->stage_pipe[pipe->mixer_stage] = NULL;
 	}
-	mutex_unlock(&ctl->lock);
 
 	return 0;
 }
@@ -1990,4 +2036,67 @@ static inline int __mdss_mdp_ctl_get_mixer_off(struct mdss_mdp_mixer *mixer)
 		return MDSS_MDP_REG_CTL_LAYER(mixer->num +
 				MDSS_MDP_INTF_LAYERMIXER3);
 	}
+}
+
+static int __mdss_mdp_mixer_handoff_helper(struct mdss_mdp_mixer *mixer,
+	struct mdss_mdp_pipe *pipe)
+{
+	int rc = 0;
+
+	if (!mixer) {
+		rc = -EINVAL;
+		goto error;
+	}
+
+	if (mixer->stage_pipe[MDSS_MDP_STAGE_UNUSED] != NULL) {
+		pr_err("More than one pipe staged on mixer num %d\n",
+			mixer->num);
+		rc = -EINVAL;
+		goto error;
+	}
+
+	pr_debug("Staging pipe num %d on mixer num %d\n",
+		pipe->num, mixer->num);
+	mixer->stage_pipe[MDSS_MDP_STAGE_UNUSED] = pipe;
+	pipe->mixer = mixer;
+	pipe->mixer_stage = MDSS_MDP_STAGE_UNUSED;
+
+error:
+	return rc;
+}
+
+/**
+ * mdss_mdp_mixer_handoff() - Stages a given pipe on the appropriate mixer
+ * @ctl:  pointer to the control structure associated with the overlay device.
+ * @num:  the mixer number on which the pipe needs to be staged.
+ * @pipe: pointer to the pipe to be staged.
+ *
+ * Function stages a given pipe on either the left mixer or the right mixer
+ * for the control structre based on the mixer number. If the input mixer
+ * number does not match either of the mixers then an error is returned.
+ * This function is called during overlay handoff when certain pipes are
+ * already staged by the bootloader.
+ */
+int mdss_mdp_mixer_handoff(struct mdss_mdp_ctl *ctl, u32 num,
+	struct mdss_mdp_pipe *pipe)
+{
+	int rc = 0;
+	struct mdss_mdp_mixer *mx_left = ctl->mixer_left;
+	struct mdss_mdp_mixer *mx_right = ctl->mixer_right;
+
+	/*
+	 * For performance calculations, stage the handed off pipe
+	 * as MDSS_MDP_STAGE_UNUSED
+	 */
+	if (mx_left && (mx_left->num == num)) {
+		rc = __mdss_mdp_mixer_handoff_helper(mx_left, pipe);
+	} else if (mx_right && (mx_right->num == num)) {
+		rc = __mdss_mdp_mixer_handoff_helper(mx_right, pipe);
+	} else {
+		pr_err("pipe num %d staged on unallocated mixer num %d\n",
+			pipe->num, num);
+		rc = -EINVAL;
+	}
+
+	return rc;
 }

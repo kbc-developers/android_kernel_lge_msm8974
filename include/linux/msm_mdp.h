@@ -1,7 +1,7 @@
 /* include/linux/msm_mdp.h
  *
  * Copyright (C) 2007 Google Incorporated
- * Copyright (c) 2012-2013 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2014 The Linux Foundation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -134,6 +134,14 @@ enum {
 	MDP_Y_CBCR_H2V2_VENUS,
 	MDP_BGRX_8888,   /* BGRX 8888 */
 	MDP_YCBYCR_H2V1,  /* YCbYCr interleave */
+	MDP_RGBA_8888_TILE,	  /* RGBA 8888 in tile format */
+	MDP_ARGB_8888_TILE,	  /* ARGB 8888 in tile format */
+	MDP_ABGR_8888_TILE,	  /* ABGR 8888 in tile format */
+	MDP_BGRA_8888_TILE,	  /* BGRA 8888 in tile format */
+	MDP_RGBX_8888_TILE,	  /* RGBX 8888 in tile format */
+	MDP_XRGB_8888_TILE,	  /* XRGB 8888 in tile format */
+	MDP_XBGR_8888_TILE,	  /* XBGR 8888 in tile format */
+	MDP_BGRX_8888_TILE,	  /* BGRX 8888 in tile format */
 	MDP_IMGTYPE_LIMIT,
 	MDP_RGB_BORDERFILL,	/* border fill pipe */
 	MDP_FB_FORMAT = MDP_IMGTYPE2_START,    /* framebuffer format */
@@ -838,6 +846,7 @@ enum {
 	metadata_op_frame_rate,
 	metadata_op_vic,
 	metadata_op_wb_format,
+	metadata_op_wb_secure,
 	metadata_op_get_caps,
 	metadata_op_crc,
 	metadata_op_max
@@ -870,6 +879,7 @@ struct msmfb_metadata {
 		uint32_t panel_frame_rate;
 		uint32_t video_info_code;
 		struct mdss_hw_caps caps;
+		uint8_t secure_en;
 	} data;
 };
 
@@ -897,6 +907,7 @@ struct mdp_display_commit {
 	uint32_t flags;
 	uint32_t wait_for_finish;
 	struct fb_var_screeninfo var;
+	struct mdp_rect roi;
 };
 
 struct mdp_page_protection {
@@ -952,6 +963,7 @@ int msm_fb_writeback_dequeue_buffer(struct fb_info *info,
 int msm_fb_writeback_stop(struct fb_info *info);
 int msm_fb_writeback_terminate(struct fb_info *info);
 int msm_fb_writeback_set_secure(struct fb_info *info, int enable);
+int msm_fb_writeback_iommu_ref(struct fb_info *info, int enable);
 #endif
 
 #endif /*_MSM_MDP_H_*/

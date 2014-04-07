@@ -48,6 +48,7 @@ struct mdss_mdp_cmd_ctx {
 	spinlock_t clk_lock;
 	struct work_struct clk_work;
 	struct work_struct pp_done_work;
+	atomic_t pp_done_cnt;
 
 	/* te config */
 	u8 tear_check;
@@ -298,6 +299,7 @@ static void mdss_mdp_cmd_pingpong_done(void *arg)
 	complete_all(&ctx->pp_comp);
 
 	if (ctx->koff_cnt) {
+		atomic_inc(&ctx->pp_done_cnt);
 		schedule_work(&ctx->pp_done_work);
 		ctx->koff_cnt--;
 		if (ctx->koff_cnt) {
@@ -320,7 +322,8 @@ static void pingpong_done_work(struct work_struct *work)
 		container_of(work, typeof(*ctx), pp_done_work);
 
 	if (ctx->ctl)
-		mdss_mdp_ctl_notify(ctx->ctl, MDP_NOTIFY_FRAME_DONE);
+		while (atomic_add_unless(&ctx->pp_done_cnt, -1, 0))
+			mdss_mdp_ctl_notify(ctx->ctl, MDP_NOTIFY_FRAME_DONE);
 }
 
 static void clk_ctrl_work(struct work_struct *work)
@@ -442,7 +445,7 @@ static int mdss_mdp_cmd_wait4pingpong(struct mdss_mdp_ctl *ctl, void *arg)
 	return rc;
 }
 
-int mdss_mdp_cmd_reconfigure_splash_done(struct mdss_mdp_ctl *ctl)
+int mdss_mdp_cmd_reconfigure_splash_done(struct mdss_mdp_ctl *ctl, bool handoff)
 {
 	struct mdss_panel_data *pdata;
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
@@ -470,6 +473,22 @@ int mdss_mdp_cmd_reconfigure_splash_done(struct mdss_mdp_ctl *ctl)
 	return ret;
 }
 
+static int mdss_mdp_cmd_set_partial_roi(struct mdss_mdp_ctl *ctl)
+{
+	int rc = 0;
+	if (ctl->roi.w && ctl->roi.h && ctl->roi_changed &&
+			ctl->panel_data->panel_info.partial_update_enabled) {
+		ctl->panel_data->panel_info.roi_x = ctl->roi.x;
+		ctl->panel_data->panel_info.roi_y = ctl->roi.y;
+		ctl->panel_data->panel_info.roi_w = ctl->roi.w;
+		ctl->panel_data->panel_info.roi_h = ctl->roi.h;
+
+		rc = mdss_mdp_ctl_intf_event(ctl,
+				MDSS_EVENT_ENABLE_PARTIAL_UPDATE, NULL);
+	}
+	return rc;
+}
+
 int mdss_mdp_cmd_kickoff(struct mdss_mdp_ctl *ctl, void *arg)
 {
 	struct mdss_mdp_cmd_ctx *ctx;
@@ -492,12 +511,14 @@ int mdss_mdp_cmd_kickoff(struct mdss_mdp_ctl *ctl, void *arg)
 		WARN(rc, "intf %d panel on error (%d)\n", ctl->intf_num, rc);
 	}
 
+	mdss_mdp_cmd_set_partial_roi(ctl);
+
+	mdss_mdp_cmd_clk_on(ctx);
+
 	/*
 	 * tx dcs command if had any
 	 */
 	mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_DSI_CMDLIST_KOFF, NULL);
-
-	mdss_mdp_cmd_clk_on(ctx);
 
 	INIT_COMPLETION(ctx->pp_comp);
 	mdss_mdp_irq_enable(MDSS_MDP_IRQ_PING_PONG_COMP, ctx->pp_num);
@@ -620,6 +641,7 @@ int mdss_mdp_cmd_start(struct mdss_mdp_ctl *ctl)
 	mutex_init(&ctx->clk_mtx);
 	INIT_WORK(&ctx->clk_work, clk_ctrl_work);
 	INIT_WORK(&ctx->pp_done_work, pingpong_done_work);
+	atomic_set(&ctx->pp_done_cnt, 0);
 	INIT_LIST_HEAD(&ctx->vsync_handlers);
 
 	pr_debug("%s: ctx=%p num=%d mixer=%d\n", __func__,

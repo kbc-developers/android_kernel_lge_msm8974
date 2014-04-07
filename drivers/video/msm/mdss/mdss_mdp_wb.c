@@ -127,6 +127,34 @@ struct mdss_mdp_data *mdss_mdp_wb_debug_buffer(struct msm_fb_data_type *mfd)
 }
 #endif
 
+/*
+ * mdss_mdp_get_secure() - Queries the secure status of a writeback session
+ * @mfd:                   Frame buffer device structure
+ * @enabled:               Pointer to convey if session is secure
+ *
+ * This api enables an entity (userspace process, driver module, etc.) to
+ * query the secure status of a writeback session. The secure status is
+ * then supplied via a pointer.
+ */
+int mdss_mdp_wb_get_secure(struct msm_fb_data_type *mfd, uint8_t *enabled)
+{
+	struct mdss_mdp_wb *wb = mfd_to_wb(mfd);
+	if (!wb)
+		return -EINVAL;
+	*enabled = wb->is_secure;
+	return 0;
+}
+
+/*
+ * mdss_mdp_set_secure() - Updates the secure status of a writeback session
+ * @mfd:                   Frame buffer device structure
+ * @enable:                New secure status (1: secure, 0: non-secure)
+ *
+ * This api enables an entity to modify the secure status of a writeback
+ * session. If enable is 1, we allocate a secure pipe so that MDP is
+ * allowed to write back into the secure buffer. If enable is 0, we
+ * deallocate the secure pipe (if it was allocated previously).
+ */
 int mdss_mdp_wb_set_secure(struct msm_fb_data_type *mfd, int enable)
 {
 	struct mdss_mdp_wb *wb = mfd_to_wb(mfd);
@@ -135,6 +163,10 @@ int mdss_mdp_wb_set_secure(struct msm_fb_data_type *mfd, int enable)
 	struct mdss_mdp_mixer *mixer;
 
 	pr_debug("setting secure=%d\n", enable);
+	if ((enable != 1) && (enable != 0)) {
+		pr_err("Invalid enable value = %d\n", enable);
+		return -EINVAL;
+	}
 
 	ctl->is_secure = enable;
 	wb->is_secure = enable;
@@ -671,7 +703,8 @@ int mdss_mdp_wb_ioctl_handler(struct msm_fb_data_type *mfd, u32 cmd,
 		break;
 	case MSMFB_WRITEBACK_QUEUE_BUFFER:
 		if (!copy_from_user(&data, arg, sizeof(data))) {
-			ret = mdss_mdp_wb_queue(mfd, arg, false);
+			ret = mdss_mdp_wb_queue(mfd, &data, false);
+			ret = copy_to_user(arg, &data, sizeof(data));
 		} else {
 			pr_err("wb queue buf failed on copy_from_user\n");
 			ret = -EFAULT;
@@ -679,7 +712,8 @@ int mdss_mdp_wb_ioctl_handler(struct msm_fb_data_type *mfd, u32 cmd,
 		break;
 	case MSMFB_WRITEBACK_DEQUEUE_BUFFER:
 		if (!copy_from_user(&data, arg, sizeof(data))) {
-			ret = mdss_mdp_wb_dequeue(mfd, arg);
+			ret = mdss_mdp_wb_dequeue(mfd, &data);
+			ret = copy_to_user(arg, &data, sizeof(data));
 		} else {
 			pr_err("wb dequeue buf failed on copy_from_user\n");
 			ret = -EFAULT;
@@ -797,3 +831,22 @@ int msm_fb_writeback_set_secure(struct fb_info *info, int enable)
 	return mdss_mdp_wb_set_secure(mfd, enable);
 }
 EXPORT_SYMBOL(msm_fb_writeback_set_secure);
+
+/**
+ * msm_fb_writeback_iommu_ref() - Power ON/OFF mdp clock
+ * @enable - true/false to Power ON/OFF mdp clock
+ *
+ * Call to enable mdp clock at start of mdp_mmap/mdp_munmap API and
+ * to disable mdp clock at end of these API's to ensure iommu is in
+ * proper state while driver map/un-map any buffers.
+ */
+int msm_fb_writeback_iommu_ref(struct fb_info *info, int enable)
+{
+	if (enable)
+		mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON, false);
+	else
+		mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF, false);
+
+	return 0;
+}
+EXPORT_SYMBOL(msm_fb_writeback_iommu_ref);
