@@ -49,6 +49,13 @@
 #ifdef CUST_G2_TOUCH
 #include <mach/board_lge.h>
 lcd_maker_id get_panel_maker_id(void);
+#define MINIMUM_PEAK_AMPLITUDE_REG    0x15
+#endif
+#if defined(A1_only) && !defined(CONFIG_MACH_MSM8974_G2_KDDI) && !defined(CONFIG_MACH_MSM8974_G2_OPEN_COM)
+#define DRUMMING_THRESH_N_DISTANCE_REG  0x15
+#endif
+#if defined(CONFIG_LGE_Z_TOUCHSCREEN)
+#define SMALL_FINGER_AMPLITUDE_THRESHOLD_REG    0x17
 #endif
 
 struct touch_device_caps
@@ -172,8 +179,8 @@ enum {
 
 #if defined(CONFIG_LGE_Z_TOUCHSCREEN)
 enum {
-	CUSTOMER_FAMILY_BAR_PATTERN = 0,
-	CUSTOMER_FAMILY_H_PATTERN,
+	TOUCH_PANEL_BAR_PATTERN = 0,
+	TOUCH_PANEL_H_PATTERN,
 };
 #endif
 

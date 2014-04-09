@@ -15,8 +15,13 @@
 // FullRawCapacitance Support 0D button
 //
 #include "RefCode_F54.h"
+#if defined(CONFIG_MACH_MSM8974_VU3_KR)
+#include "TestLimits_vu3.h"
+#elif defined(CONFIG_LGE_Z_TOUCHSCREEN)
+#include "TestLimits_zee.h"
+#else
 #include "TestLimits.h"
-
+#endif
 #if 0
 #ifdef _DEBUG
 #define DEBUG_printk(format, ...) printk(format, __VA_ARGS__)
@@ -157,8 +162,11 @@ unsigned char TRX_Open[7] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00} ;
 unsigned char TRX_Gnd[7] = {0xff,0xff,0xff,0xff,0x3,0xff,0xfc} ;
 unsigned char TRX_Short[7] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00} ;
 int HighResistanceLowerLimit[3] = {-1000, -1000, -400};
+#ifdef CONFIG_MACH_MSM8974_G2_OPEN_COM
+int HighResistanceUpperLimit[3] = {450, 500, 200};
+#else
 int HighResistanceUpperLimit[3] = {450, 450, 200};
-
+#endif
 
 enum {
 	STARTTIME,

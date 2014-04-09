@@ -1163,6 +1163,10 @@ int synaptics_ts_init(struct i2c_client* client, struct touch_fw_info* fw_info)
 			(struct synaptics_ts_data *)get_touch_handle(client);
 
 	u8 buf = 0;
+#if defined(CONFIG_LGE_Z_TOUCHSCREEN)
+	u8 xy_coordinate[4] = {0xd0, 0x02, 0x00, 0x05};
+	u8 small_finger_amp_th[2] = {0};
+#endif
 
 	if (touch_debug_mask & DEBUG_TRACE)
 		TOUCH_DEBUG_MSG("\n");
