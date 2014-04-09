@@ -177,6 +177,8 @@ struct msm_fb_data_type {
 	struct completion power_set_comp;
 	u32 is_power_setting;
 
+	struct work_struct commit_work;
+
 	u32 dcm_state;
 	struct list_head proc_list;
 };
