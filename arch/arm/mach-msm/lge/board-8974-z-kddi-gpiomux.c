@@ -231,12 +231,14 @@ static struct gpiomux_setting snfc_hvdd_cfg = {
     .pull = GPIOMUX_PULL_NONE,
     .dir = GPIOMUX_OUT_LOW,
 };
+#if 0
 static struct gpiomux_setting snfc_uicc_cfg = {
     .func = GPIOMUX_FUNC_GPIO,
     .drv = GPIOMUX_DRV_2MA,
     .pull = GPIOMUX_PULL_NONE,
     .dir = GPIOMUX_OUT_HIGH,
 };
+#endif
 #endif
 
 static struct gpiomux_setting gpio_uart_config = {
