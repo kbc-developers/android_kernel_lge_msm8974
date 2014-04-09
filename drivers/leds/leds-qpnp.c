@@ -3642,12 +3642,6 @@ static int __devinit qpnp_leds_probe(struct spmi_device *spmi)
 
 	dev_set_drvdata(&spmi->dev, led_array);
 
-#ifdef CONFIG_LEDS_PM8941_EMOTIONAL
-	zw_led_register(&red_led->cdev);
-	zw_led_register(&green_led->cdev);
-	zw_led_register(&blue_led->cdev);
-#endif
-
 	return 0;
 
 fail_id_check:
@@ -3663,12 +3657,6 @@ static int __devexit qpnp_leds_remove(struct spmi_device *spmi)
 {
 	struct qpnp_led_data *led_array  = dev_get_drvdata(&spmi->dev);
 	int i, parsed_leds = led_array->num_leds;
-
-#ifdef CONFIG_LEDS_PM8941_EMOTIONAL
-	zw_led_unregister(&red_led->cdev);
-	zw_led_unregister(&green_led->cdev);
-	zw_led_unregister(&blue_led->cdev);
-#endif
 
 	for (i = 0; i < parsed_leds; i++) {
 		cancel_work_sync(&led_array[i].work);

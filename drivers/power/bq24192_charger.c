@@ -331,24 +331,6 @@ static int bq24192_masked_write(struct i2c_client *client, int reg,
 	return 0;
 }
 
-static void bq24192_reginfo(void)
-{
-	int i;
-	int cnt = ARRAY_SIZE(bq24192_debug_regs);
-	u8 val[cnt];
-
-	if(!the_chip)
-		return;
-
-	for (i = 0; i < cnt; i++)
-		bq24192_read_reg(the_chip->client,
-			bq24192_debug_regs[i].reg, &val[i]);
-
-	pr_info("0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X\n",
-		val[0],val[1],val[2],val[3],val[4],
-		val[5],val[6],val[7],val[8],val[9]);
-}
-
 struct input_ma_limit_entry {
 	int  icl_ma;
 	u8  value;
@@ -547,24 +529,6 @@ static int bq24192_set_term_current(struct bq24192_chip *chip, int ma)
 			ITERM_MASK, reg_val);
 }
 
-#define EN_TIMER_SHIFT 3
-static int bq24192_set_chg_timer(struct bq24192_chip *chip, bool enable)
-{
-	int ret;
-	u8 val = (u8)(!!enable << EN_TIMER_SHIFT);
-
-	pr_info("enable=%d\n", enable);
-
-	ret = bq24192_masked_write(chip->client, BQ05_CHARGE_TERM_TIMER_CONT_REG,
-						EN_CHG_TIMER_MASK, val);
-	if (ret) {
-		pr_err("failed to set chg safety timer ret=%d\n", ret);
-		return ret;
-	}
-
-	return 0;
-}
-
 #define CHG_TIMEOUT_SHIFT 1
 static int bq24192_set_chg_timeout(struct bq24192_chip *chip)
 {
@@ -578,25 +542,6 @@ static int bq24192_set_chg_timeout(struct bq24192_chip *chip)
 
 	return bq24192_masked_write(chip->client, BQ05_CHARGE_TERM_TIMER_CONT_REG,
 			CHG_TIMER_MASK, reg_val);
-}
-
-#define EN_CHG_TERM_SHIFT 7
-static int bq24192_set_chg_term(struct bq24192_chip *chip, bool enable)
-{
-	int ret;
-	u8 val = (u8)(!!enable << EN_CHG_TERM_SHIFT);
-
-	pr_info("enable=%d\n", enable);
-
-	ret = bq24192_masked_write(chip->client, BQ05_CHARGE_TERM_TIMER_CONT_REG,
-						EN_CHG_TERM_MASK, val);
-	if (ret) {
-		pr_err("failed to disable chg term  ret=%d\n", ret);
-		return ret;
-	}
-
-	return 0;
-
 }
 
 #define IRCOMP_R_MIN_MOHM  0
@@ -901,19 +846,6 @@ static void bq24192_input_limit_worker(struct work_struct *work)
 		chip->icl_idx = 0;
 		chip->icl_fail_cnt = 0;
 		wake_unlock(&chip->icl_wake_lock);
-	}
-}
-
-static void bq24192_input_limit_exception_worker(struct work_struct *work)
-{
-	struct bq24192_chip *chip = container_of(work, struct bq24192_chip,
-						input_limit_exception_work.work);
-	int usb_present = bq24192_is_charger_present(chip);
-	if (chip->usb_present ^ usb_present) {
-		chip->usb_present = usb_present;
-		pr_info("notify vbus to usb_present=%d\n", usb_present);
-		power_supply_set_present(chip->usb_psy, chip->usb_present);
-		power_supply_changed(chip->usb_psy);
 	}
 }
 

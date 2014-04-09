@@ -165,7 +165,9 @@ int msm_jpeg_platform_init(struct platform_device *pdev,
 	void *context)
 {
 	int rc = -1;
+#ifdef CONFIG_MSM_IOMMU
 	int i = 0;
+#endif
 	int jpeg_irq;
 	struct resource *jpeg_mem, *jpeg_io, *jpeg_irq_res;
 	void *jpeg_base;
@@ -299,8 +301,10 @@ fail_request_irq:
 	}
 #endif
 
+#ifdef CONFIG_MSM_IOMMU
 fail_iommu:
 	iounmap(pgmn_dev->jpeg_vbif);
+#endif
 
 fail_vbif:
 	msm_cam_clk_enable(&pgmn_dev->pdev->dev, jpeg_8x_clk_info,
@@ -328,7 +332,9 @@ int msm_jpeg_platform_release(struct resource *mem, void *base, int irq,
 	void *context)
 {
 	int result = 0;
+#ifdef CONFIG_MSM_IOMMU
 	int i = 0;
+#endif
 	struct msm_jpeg_device *pgmn_dev =
 		(struct msm_jpeg_device *) context;
 

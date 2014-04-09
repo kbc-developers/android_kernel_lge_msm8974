@@ -880,29 +880,13 @@ long __msm_jpeg_ioctl(struct msm_jpeg_device *pgmn_dev,
 	return rc;
 }
 
-static int camera_register_domain(void)
-{
-	struct msm_iova_partition camera_fw_partition = {
-		.start = SZ_128K,
-		.size = SZ_2G - SZ_128K,
-	};
-
-	struct msm_iova_layout camera_fw_layout = {
-		.partitions = &camera_fw_partition,
-		.npartitions = 1,
-		.client_name = "camera_jpeg",
-		.domain_flags = 0,
-	};
-	return msm_register_domain(&camera_fw_layout);
-}
-
 int __msm_jpeg_init(struct msm_jpeg_device *pgmn_dev)
 {
-	int rc = 0, i = 0, j = 0;
+	int rc = 0;
 	int idx = 0;
-	char *iommu_name[JPEG_DEV_CNT] = {"jpeg_enc0", "jpeg_enc1",
-		"jpeg_dec"};
-
+#ifdef CONFIG_MSM_IOMMU
+	int i = 0;
+#endif
 	mutex_init(&pgmn_dev->lock);
 
 	pr_err("%s:%d] Jpeg Device id %d", __func__, __LINE__,
@@ -950,9 +934,11 @@ int __msm_jpeg_init(struct msm_jpeg_device *pgmn_dev)
 #endif
 
 	return rc;
+#ifdef CONFIG_MSM_IOMMU
 error:
 	mutex_destroy(&pgmn_dev->lock);
 	return -EFAULT;
+#endif
 }
 
 int __msm_jpeg_exit(struct msm_jpeg_device *pgmn_dev)

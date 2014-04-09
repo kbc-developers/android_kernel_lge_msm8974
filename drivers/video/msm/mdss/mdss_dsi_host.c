@@ -1159,26 +1159,6 @@ static int mdss_dsi_cmd_dma_tx(struct mdss_dsi_ctrl_pdata *ctrl,
 static int mdss_dsi_cmd_dma_rx(struct mdss_dsi_ctrl_pdata *ctrl,
 			struct dsi_buf *rp, int rlen);
 
-#ifdef LGE_HRTIMER_OLED_PATCH
-static enum hrtimer_restart oled_hrtimer_callback(struct hrtimer *timer)
-{
-	complete(&oled_hrtimer_comp);
-	return HRTIMER_NORESTART;
-}
-
-static void oled_hrtimer_delay(int delay_in_ms)
-{
-	ktime_t ktime;
-	ktime = ktime_set(0, delay_in_ms * NSEC_PER_MSEC);
-	INIT_COMPLETION(oled_hrtimer_comp);
-
-	oled_hrtimer.function = oled_hrtimer_callback;
-	hrtimer_start(&oled_hrtimer, ktime, HRTIMER_MODE_REL);
-	wait_for_completion_timeout(&oled_hrtimer_comp, msecs_to_jiffies(delay_in_ms + (int)(delay_in_ms / 5)));
-	hrtimer_cancel(&oled_hrtimer);
-}
-#endif
-
 static int mdss_dsi_cmds2buf_tx(struct mdss_dsi_ctrl_pdata *ctrl,
 			struct dsi_cmd_desc *cmds, int cnt)
 {

@@ -84,7 +84,7 @@
 extern int backlight_status;
 #endif
 
-#ifdef CONFIG_OLED_SUPPORT
+#if 0 //def CONFIG_OLED_SUPPORT
 #if defined(CONFIG_MACH_LGE) && defined(CONFIG_FB_MSM_LOGO)
 static int unset_bl_level;
 #else
