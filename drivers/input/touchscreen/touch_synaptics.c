@@ -213,6 +213,11 @@ extern int ts_charger_plug;
 #if (defined(A1_only) && !defined(CONFIG_MACH_MSM8974_G2_KDDI) && !defined(CONFIG_MACH_MSM8974_G2_OPEN_COM))  || defined(CONFIG_LGE_Z_TOUCHSCREEN)
 extern int ime_drumming_status;
 extern int keyguard_status;
+#else
+#if defined(CONFIG_LGE_Z_TOUCHSCREEN)
+extern int ime_drumming_status;
+extern int keyguard_status;
+#endif
 #endif
 #if defined(CONFIG_LGE_Z_TOUCHSCREEN)
 extern int get_touch_ts_fw_version(char *);

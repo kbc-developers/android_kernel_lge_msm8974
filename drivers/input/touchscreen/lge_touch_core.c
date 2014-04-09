@@ -63,7 +63,17 @@ int f54_window_crack_check_mode = 0;
 int f54_window_crack = 0;
 static int ts_suspend = 0;
 static bool blank_status = false;
+#if (defined(A1_only) && !defined(CONFIG_MACH_MSM8974_G2_KDDI) && !defined(CONFIG_MACH_MSM8974_G2_OPEN_COM))  || defined(CONFIG_LGE_Z_TOUCHSCREEN)
+int ime_drumming_status = 0;
+int keyguard_status = 0;
 #endif
+#else
+#if defined(CONFIG_LGE_Z_TOUCHSCREEN)
+int ime_drumming_status = 0;
+int keyguard_status = 0;
+#endif
+#endif
+
 
 #if defined(Z_GLOVE_TOUCH_SUPPORT)
 static int set_glove_finger_enable(struct lge_touch_data *ts, int onoff);
