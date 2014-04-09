@@ -880,12 +880,33 @@ long __msm_jpeg_ioctl(struct msm_jpeg_device *pgmn_dev,
 	return rc;
 }
 
+#ifdef CONFIG_MSM_IOMMU
+static int camera_register_domain(void)
+{
+	struct msm_iova_partition camera_fw_partition = {
+		.start = SZ_128K,
+		.size = SZ_2G - SZ_128K,
+	};
+
+	struct msm_iova_layout camera_fw_layout = {
+		.partitions = &camera_fw_partition,
+		.npartitions = 1,
+		.client_name = "camera_jpeg",
+		.domain_flags = 0,
+	};
+	return msm_register_domain(&camera_fw_layout);
+}
+#endif
+
 int __msm_jpeg_init(struct msm_jpeg_device *pgmn_dev)
 {
 	int rc = 0;
 	int idx = 0;
 #ifdef CONFIG_MSM_IOMMU
 	int i = 0;
+	int j = 0;
+	char *iommu_name[JPEG_DEV_CNT] = {"jpeg_enc0", "jpeg_enc1",
+		"jpeg_dec"};
 #endif
 	mutex_init(&pgmn_dev->lock);
 
