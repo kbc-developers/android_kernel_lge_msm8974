@@ -378,6 +378,9 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 {
 	unsigned int cec;
 #ifdef CONFIG_LGE_PM
+#if defined(CONFIG_MACH_MSM8974_Z_KR) || defined(CONFIG_MACH_MSM8974_Z_KDDI)
+	extern int boost_freq;
+#endif
 	extern bool suspend_marker_entry;
 	unsigned int cnt, inpr;
 	bool wakeup_pending = true;
@@ -407,6 +410,12 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 			split_counters(&cnt, &inpr);
 			printk(KERN_ERR "%s: %s, cnt:%d, saved_cnt:%d, inpr:%d\n",
 				__func__, ws->name, cnt, saved_count, inpr);
+#if defined(CONFIG_MACH_MSM8974_Z_KR) || defined(CONFIG_MACH_MSM8974_Z_KDDI)
+			if (boost_freq == 1) {
+				if (!strcmp(ws->name, "touch_irq") || !strcmp(ws->name, "hall_ic_wakeups"))
+					boost_freq++;
+			}
+#endif
 		}
 	}
 #endif

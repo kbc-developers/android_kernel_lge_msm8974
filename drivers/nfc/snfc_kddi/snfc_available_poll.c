@@ -12,7 +12,8 @@
 #include <mach/board_lge.h>
 
 extern struct snfc_gp snfc_gpios;
-
+extern int koto_state;
+int snfc_poll_check_sleep_value = 1000;
 /*
  * Description: 
  * Input: 
@@ -128,7 +129,10 @@ static ssize_t snfc_avail_poll_read(struct file *pf, char *pbuf, size_t size, lo
 		}
 		if(rfs_status == GPIO_HIGH_VALUE && cen_status == GPIO_HIGH_VALUE && uart_status != UART_STATUS_FOR_FELICA)
 			break;
-		msleep(1);
+        if(koto_state == 10)
+            break;
+        
+		usleep(snfc_poll_check_sleep_value);
 	}while(loop);
 
 	available_poll = 1;

@@ -63,8 +63,12 @@ static u8 qpnp_read_byte(struct spmi_device *spmi, u16 addr)
 	return val;
 }
 
-#ifdef CONFIG_SMB349_CHARGER
+#if defined(CONFIG_SMB349_CHARGER) || defined(CONFIG_BQ24192_CHARGER)
 struct spmi_device		*the_spmi;
+#define SMBB_BAT_IF_BAT_PRES_STATUS 0x1208
+#endif
+
+#ifdef CONFIG_SMB349_CHARGER
 static int
 smb349_qpnp_write(struct spmi_device *spmi, u16 addr, u8 val)
 {
@@ -160,6 +164,27 @@ void smb349_pmic_reg_dump(void)
 }
 #endif
 
+#ifdef CONFIG_BQ24192_CHARGER
+bool bq24192_pmic_batt_present(void)
+{
+	int rc;
+	u8  val;
+
+	if (!the_spmi) {
+		pr_err("fail to override spmi not init\n");
+		return true;
+	}
+	rc = spmi_ext_register_readl(the_spmi->ctrl,
+				the_spmi->sid, SMBB_BAT_IF_BAT_PRES_STATUS, &val, 1);
+	if (rc) {
+		pr_err("failed to read pmic 0x1208 rc:%d\n", rc);
+		return true;
+	}
+
+	return val & BIT(7);
+}
+#endif
+
 #define REV2_IRQ_AVAILABLE_VERSION	2
 static bool __misc_irqs_available(struct qpnp_misc_dev *dev)
 {
@@ -228,7 +253,7 @@ static int __devinit qpnp_misc_probe(struct spmi_device *spmi)
 	mdev->spmi = spmi;
 	mdev->dev = &(spmi->dev);
 	mdev->resource = resource;
-#ifdef CONFIG_SMB349_CHARGER
+#if defined(CONFIG_SMB349_CHARGER) || defined(CONFIG_BQ24192_CHARGER)
 	the_spmi = spmi;
 #endif
 

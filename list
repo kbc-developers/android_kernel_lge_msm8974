@@ -1,0 +1,8 @@
+./drivers/usb/dwc3/dwc3-msm.c
+./drivers/usb/dwc3/gadget.c
+./drivers/tty/serial/msm_serial_hs_lite.c
+./drivers/power/qpnp-bms.c
+./drivers/misc/lge_uei_irrc.c
+./arch/arm/mach-msm/socinfo.c
+./init/main.c
+

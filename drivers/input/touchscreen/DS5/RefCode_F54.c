@@ -171,6 +171,9 @@ struct timeval t_interval[TIME_PROFILE_MAX];
 static int outbuf = 0;
 char f54_wlog_buf[6000] = {0};
 
+#if defined(CONFIG_LGE_Z_TOUCHSCREEN)
+int use_test_limit_2 = 0;
+#endif
 
 #if 0
 // Read one or more sensor registers. The number of registers to read (starting
@@ -395,36 +398,73 @@ int CompareImageReport(void)
 		rx_crack_count = 0;
 
 		for (i = 0; i < (int)F12_2DTxCount; i++){
-			if ((ImagepF[i][j] < LowerImageLimit[i][j]) || (ImagepF[i][j] > UpperImageLimit[i][j]))	{
-				if(f54_window_crack_check_mode) {
-					if (ImagepF[i][j] < 300){
-						rx_crack_count++;
-						node_crack_count++;
+#if defined(CONFIG_LGE_Z_TOUCHSCREEN)
+			if (use_test_limit_2) {
+				if ((ImagepF[i][j] < LowerImageLimit2[i][j]) || (ImagepF[i][j] > UpperImageLimit2[i][j]))	{
+					if(f54_window_crack_check_mode) {
+						if (ImagepF[i][j] < 300){
+							rx_crack_count++;
+							node_crack_count++;
+						}
+						else row_crack_count = 0;
+
+						if (F12_2DTxCount<=rx_crack_count) row_crack_count++;
+
+						if (2<row_crack_count){
+							f54_window_crack = 1;
+							break;
+						}
+
+						if((int)(F12_2DTxCount*F12_2DRxCount*20/100)<node_crack_count) {
+							result = false;
+							f54_window_crack = 1;
+							break;
+						}
+
+						printk("[Touch] Tx [%d] Rx [%d] node_crack_count %d, row_crack_count %d, raw cap %d\n",i, j,node_crack_count,row_crack_count, ImagepF[i][j]);
 					}
-					else row_crack_count = 0;
-
-					if (F12_2DTxCount<=rx_crack_count) row_crack_count++;
-
-					if (2<row_crack_count){
-						f54_window_crack = 1;
-						break;
-					}
-
-					if((int)(F12_2DTxCount*F12_2DRxCount*20/100)<node_crack_count) {
+					else {
+						//printf("Failed: 2D area: Tx [%d] Rx [%d]\n",i, j);
+						outbuf += sprintf(f54_wlog_buf+outbuf, "FAIL, %d,%d,%d\n", i, j, ImagepF[i][j]);
 						result = false;
-						f54_window_crack = 1;
 						break;
 					}
+				}
+			} else {
+#endif
+				if ((ImagepF[i][j] < LowerImageLimit[i][j]) || (ImagepF[i][j] > UpperImageLimit[i][j]))	{
+					if(f54_window_crack_check_mode) {
+						if (ImagepF[i][j] < 300){
+							rx_crack_count++;
+							node_crack_count++;
+						}
+						else row_crack_count = 0;
 
-					printk("[Touch] Tx [%d] Rx [%d] node_crack_count %d, row_crack_count %d, raw cap %d\n",i, j,node_crack_count,row_crack_count, ImagepF[i][j]);
+						if (F12_2DTxCount<=rx_crack_count) row_crack_count++;
+
+						if (2<row_crack_count){
+							f54_window_crack = 1;
+							break;
+						}
+
+						if((int)(F12_2DTxCount*F12_2DRxCount*20/100)<node_crack_count) {
+							result = false;
+							f54_window_crack = 1;
+							break;
+						}
+
+						printk("[Touch] Tx [%d] Rx [%d] node_crack_count %d, row_crack_count %d, raw cap %d\n",i, j,node_crack_count,row_crack_count, ImagepF[i][j]);
+					}
+					else {
+						//printf("Failed: 2D area: Tx [%d] Rx [%d]\n",i, j);
+						outbuf += sprintf(f54_wlog_buf+outbuf, "FAIL, %d,%d,%d\n", i, j, ImagepF[i][j]);
+						result = false;
+						break;
+					}
 				}
-				else {
-					//printf("Failed: 2D area: Tx [%d] Rx [%d]\n",i, j);
-					outbuf += sprintf(f54_wlog_buf+outbuf, "FAIL, %d,%d,%d\n", i, j, ImagepF[i][j]);
-					result = false;
-					break;
-				}
+#if defined(CONFIG_LGE_Z_TOUCHSCREEN)
 			}
+#endif
 		}
 	}
 
@@ -1085,6 +1125,11 @@ void RunQueries(void)
 				break;
 			}
 		case 0x54:
+#if defined(CONFIG_LGE_Z_TOUCHSCREEN)
+			/* re-check F54 registers for Folder Test */
+			/* initial touch panel = E032 */
+			bHaveF54 = false;
+#endif
 			if (!bHaveF54){
 				Read8BitRegisters((cAddr-2), &F54DataBase, 1);
 				Read8BitRegisters((cAddr-3), &F54ControlBase, 1);

@@ -282,8 +282,10 @@ static ssize_t set_pattern(struct device *dev, struct device_attribute *attr, co
 
 	if(lge_get_boot_mode() <= LGE_BOOT_MODE_CHARGERLOGO) {
 		printk("[RGB LED] pattern_num=%d\n", pattern_num);
+#if !defined(CONFIG_MACH_MSM8974_Z_KR)&&!defined(CONFIG_MACH_MSM8974_Z_TMO_US)&& !defined(CONFIG_MACH_MSM8974_Z_SPR)&& !defined(CONFIG_MACH_MSM8974_Z_ATT_US) && !defined(CONFIG_MACH_MSM8974_Z_KDDI)	
 		if (!pattern_num || pattern_num == 35 || pattern_num == 36 || pattern_num == 1035)
 			set_kpdbl_pattern(pattern_num);
+#endif
 		if ((pattern_num != 35)&&(pattern_num != 36))
 			change_led_pattern(pattern_num);
 	}

@@ -10,6 +10,8 @@
 /*
 *	Define
 */
+#define KOTO_STATE_AVAILABLE_POLL_SLEEP_VALUE_NORMAL 11
+#define KOTO_STATE_AVAILABLE_POLL_SLEEP_VALUE_DESABLING 12
 
 /*
 *	Internal definitions
@@ -22,12 +24,14 @@ _e_snfc_uart_status g_uartcollisoncontrol = UART_STATUS_KOTO_OFF;
 static int gpio_init = 0;
 static int forced_hsel_up_flag=0;
 static int forced_pon_up_flag=0;	
-static int koto_abnormal=0;
+int koto_state=0;
 static int autopoll_status = 0;
 
 int snfc_poweroff_flag=0;
 
 extern struct snfc_gp snfc_gpios;
+extern int snfc_poll_check_sleep_value;
+
 /* 
  *	Function definitions
  */
@@ -87,13 +91,13 @@ static int snfc_uart_control_open(struct inode *inode, struct file *fp)
                 SNFC_DEBUG_MSG("[snfc_intu_poll] gpio_request snfc_hvdd fail\n");
             }
             snfc_gpio_write(snfc_gpios.gpio_hvdd, GPIO_HIGH_VALUE);
-
+/*
             rc = gpio_request(snfc_gpios.gpio_uicc_con, "snfc_uicc_con");
             {
                 SNFC_DEBUG_MSG("[snfc_driver] gpio_request snfc_uicc_con fail\n");
             }
             snfc_gpio_write(snfc_gpios.gpio_uicc_con, GPIO_LOW_VALUE);
-
+*/
             gpio_init = 1;                
         }
 
@@ -134,8 +138,8 @@ static long snfc_uart_control_ioctl(struct file *flip, unsigned int cmd, unsigne
 	//int i,err;
 	int size;
 	_e_snfc_uart_status current_status;
+    int break_cnt;
 	int autopoll_wait_cnt;
-	int break_cnt;
 	unsigned char write_buf = 0x00/*, read_buf = 0x00*/;
 	int rc =0;
 	
@@ -273,6 +277,14 @@ static long snfc_uart_control_ioctl(struct file *flip, unsigned int cmd, unsigne
 			rc = snfc_i2c_write(0x02, &write_buf, 1);
 			//mutex_unlock(&nfc_cen_mutex);  			
 			break;
+            
+        case IOCTL_SNFC_HVDD_DOWN_SET:
+            SNFC_DEBUG_MSG("snfc_uart_control] HVDD Down Set wait\n");
+
+            //snfc_gpio_write(snfc_gpios.gpio_uicc_con ,GPIO_LOW_VALUE );
+            //mdelay(20);
+            //snfc_gpio_write(snfc_gpios.gpio_hvdd ,GPIO_LOW_VALUE );
+            break;
 			
 		case IOCTL_SNFC_END :
 			SNFC_DEBUG_MSG_LOW("[snfc_uart_control] IOCTL_SNFC_END - start\n");
@@ -320,7 +332,7 @@ static int snfc_uart_control_read(struct file *pf, char *pbuf, size_t size, loff
 		
 	SNFC_DEBUG_MSG_LOW("[snfc_uart_control] snfc_uart_control_read - start \n");
 	
-	current_status = koto_abnormal;	
+	current_status = koto_state;	
 	
 	rc = copy_to_user((void*)pbuf, (void*)&current_status, size);
 	if(rc)
@@ -329,7 +341,7 @@ static int snfc_uart_control_read(struct file *pf, char *pbuf, size_t size, loff
 		return rc;
 	}
 
-	SNFC_DEBUG_MSG_LOW("[snfc_uart_control] snfc_uart_control_read :koto_abnormal=%d - end \n",koto_abnormal);
+	SNFC_DEBUG_MSG_LOW("[snfc_uart_control] snfc_uart_control_read :koto_abnormal=%d - end \n",koto_state);
 	
 	return size;
 }
@@ -353,9 +365,20 @@ static int snfc_uart_control_write(struct file *pf, const char *pbuf, size_t siz
 	}
 	
 	//if(autopoll_status == 1)
-		koto_abnormal = new_status;	
+		koto_state = new_status;	
 
-	SNFC_DEBUG_MSG_LOW("[snfc_uart_control] snfc_uart_control_write - end:koto_abnormal=%d \n",koto_abnormal);
+    if(koto_state == KOTO_STATE_AVAILABLE_POLL_SLEEP_VALUE_NORMAL)
+    {
+       snfc_poll_check_sleep_value = 1000;
+       koto_state = 0;
+    }
+
+    if(koto_state == KOTO_STATE_AVAILABLE_POLL_SLEEP_VALUE_DESABLING){
+        snfc_poll_check_sleep_value = 10;
+        koto_state = 0;
+    }
+        
+	SNFC_DEBUG_MSG_LOW("[snfc_uart_control] snfc_uart_control_write - end:koto_abnormal=%d \n",koto_state);
 
 	return size;
 }
@@ -402,6 +425,12 @@ int snfc_uart_control_probe(struct device_node *np)
 
     SNFC_DEBUG_MSG_LOW("[snfc_driver] GPIO_SNFC_PON = %d, GPIO_SNFC_HSEL = %d\n",
         snfc_gpio_read(snfc_gpios.gpio_pon),snfc_gpio_read(snfc_gpios.gpio_hsel) ); 
+
+    rc = gpio_request(snfc_gpios.gpio_uicc_con, "snfc_uicc_con");
+    if(rc){
+        SNFC_DEBUG_MSG("[snfc_driver] gpio_request snfc_uicc_con fail\n");
+    } 
+    snfc_gpio_open(snfc_gpios.gpio_uicc_con,GPIO_DIRECTION_OUT,GPIO_LOW_VALUE);
 
     /* register the device file */
     rc = misc_register(&snfc_uart_control_device);

@@ -69,6 +69,9 @@ static bool blank_status = false;
 static int set_glove_finger_enable(struct lge_touch_data *ts, int onoff);
 static int glove_finger_enable = 0;
 #endif
+#if defined(CONFIG_LGE_Z_TOUCHSCREEN)
+int quick_cover_status = 0;
+#endif
 
 struct touch_device_driver*	touch_device_func;
 struct workqueue_struct*	touch_wq;
@@ -110,6 +113,7 @@ struct timeval t_ex_debug[TIME_EX_PROFILE_MAX];
 #define MAX_RETRY_COUNT			3
 #define MAX_GHOST_CHECK_COUNT	3
 #define GHOST_EDGE_ZONE_INTERVAL	40
+#define IRQ_WAKE_CHECK    0
 
 #if defined(CONFIG_LGE_VU3_TOUCHSCREEN)
 #define TOUCH_BUTTON_ENABLE_Y_POSITION 1899
@@ -893,6 +897,16 @@ static int touch_asb_input_report(struct lge_touch_data *ts, int status)
 					&& (ts->ts_data.curr_data[id].y_position
 						>= ts->pdata->caps->y_button_boundary))
 				continue;
+
+#if defined(CONFIG_LGE_Z_TOUCHSCREEN)
+			if (unlikely(quick_cover_status)) {
+				if (unlikely(ts->ts_data.curr_data[id].y_position > 540 || ts->ts_data.curr_data[id].x_position < 170
+						|| ts->ts_data.curr_data[id].x_position > 550)) {
+						ts->ts_data.curr_data[id].status = FINGER_RELEASED;
+				}
+			}
+#endif
+
 			if (ts->ts_data.curr_data[id].status == FINGER_PRESSED) {
 #if !defined(MT_PROTOCOL_A)
 				input_mt_slot(ts->input_dev, id);
@@ -1181,6 +1195,9 @@ static void safety_reset(struct lge_touch_data *ts)
 static int touch_ic_init(struct lge_touch_data *ts)
 {
 	int next_work = 0;
+#if defined(CONFIG_LGE_VU3_TOUCHSCREEN)
+	int ret = 0;
+#endif
 	ts->int_pin_state = 0;
 
 	if(unlikely(ts->ic_init_err_cnt >= MAX_RETRY_COUNT)){
@@ -1232,7 +1249,7 @@ static int touch_ic_init(struct lge_touch_data *ts)
 #if defined(A1_only)
 		ts->gd_ctrl.init_data.mask = GHOST_LONG_PRESS | GHOST_FIRST_IRQ | GHOST_PRESSURE | GHOST_TA_DEBOUNCE | GHOST_EDGE_ZONE;
 #elif defined(CONFIG_LGE_Z_TOUCHSCREEN)
-		ts->gd_ctrl.init_data.mask = GHOST_LONG_PRESS | GHOST_FIRST_IRQ | GHOST_PRESSURE | GHOST_TA_RESET;
+		ts->gd_ctrl.init_data.mask = GHOST_LONG_PRESS | GHOST_FIRST_IRQ | GHOST_PRESSURE | GHOST_EDGE_ZONE;
 #else
 		ts->gd_ctrl.init_data.mask = GHOST_LONG_PRESS | GHOST_FIRST_IRQ | GHOST_PRESSURE | GHOST_BUTTON | GHOST_TA_RESET;
 #endif
@@ -1315,8 +1332,12 @@ static int touch_ic_init(struct lge_touch_data *ts)
 err_out_retry:
 	ts->ic_init_err_cnt++;
 	safety_reset(ts);
+#if defined(CONFIG_LGE_VU3_TOUCHSCREEN)
+	ret = touch_ic_init(ts);
+	return ret;
+#else
 	queue_delayed_work(touch_wq, &ts->work_init, msecs_to_jiffies(10));
-
+#endif
 	return 0;
 
 err_out_critical:
@@ -1872,11 +1893,17 @@ static void check_log_finger_changed(struct lge_touch_data *ts, u8 total_num)
 					total_num, tmp_r, tmp_p,
 					ts->ts_data.curr_data[tmp_p].pressure);
 #else
+#if defined(CONFIG_LGE_Z_TOUCHSCREEN)
+			if (likely(!quick_cover_status)) {
+#endif
 			TOUCH_INFO_MSG("%d finger changed : <%d -> %d> x[%4d] y[%4d] z[%3d]\n",
 						total_num, tmp_r, tmp_p,
 						ts->ts_data.curr_data[tmp_p].x_position,
 						ts->ts_data.curr_data[tmp_p].y_position,
 						ts->ts_data.curr_data[tmp_p].pressure);
+#if defined(CONFIG_LGE_Z_TOUCHSCREEN)
+			}
+#endif
 #endif
 		}
 	}
