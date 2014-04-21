@@ -583,6 +583,20 @@ static int dwc3_otg_set_power(struct usb_phy *phy, unsigned mA)
 			goto psy_error;
 		if (power_supply_set_current_limit(dotg->psy, 1000*mA))
 			goto psy_error;
+#ifdef CONFIG_MACH_MSM8974_G2_KDDI
+		if(!strncmp(dotg->psy->name,"ac", 2)) {
+			dotg->psy = power_supply_get_by_name("usb");
+			if (!dotg->psy)
+				goto psy_error;
+
+			if(power_supply_set_current_limit(dotg->psy, 1000*mA))
+				goto psy_error;
+
+			dotg->psy = power_supply_get_by_name("ac");
+			if (!dotg->psy)
+				goto psy_error;
+		}
+#endif
 	} else if (dotg->charger->max_power > 0 && (mA == 0 || mA == 2)) {
 		/* Disable charging */
 		if (power_supply_set_online(dotg->psy, false))
@@ -590,6 +604,21 @@ static int dwc3_otg_set_power(struct usb_phy *phy, unsigned mA)
 		/* Set max current limit */
 		if (power_supply_set_current_limit(dotg->psy, 0))
 			goto psy_error;
+
+#ifdef CONFIG_MACH_MSM8974_G2_KDDI
+		if(!strncmp(dotg->psy->name,"ac", 2)) {
+			dotg->psy = power_supply_get_by_name("usb");
+			if (!dotg->psy)
+				goto psy_error;
+
+			if(power_supply_set_current_limit(dotg->psy, 0))
+				goto psy_error;
+
+			dotg->psy = power_supply_get_by_name("ac");
+			if (!dotg->psy)
+				goto psy_error;
+		}
+#endif
 
 /* BEGIN : janghyun.baek@lge.com 2012-12-26 For cable detection*/
 #ifdef CONFIG_LGE_PM

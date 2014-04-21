@@ -110,6 +110,8 @@ cd $BIN_DIR
 #make_odin3_image
 
 # create cwm image
+echo ""
+echo "=====> CREATE CWM INSTALL ZIP"
 make_cwm_image
 
 cd $KERNEL_DIR

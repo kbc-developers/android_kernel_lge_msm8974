@@ -15,6 +15,7 @@
 
 #include <linux/bitmap.h>
 #include <linux/errno.h>
+#include <linux/iopoll.h>
 #include <linux/mutex.h>
 
 #include "mdss_mdp.h"
@@ -25,12 +26,12 @@
 #define SMP_MB_ENTRY_SIZE	16
 #define MAX_BPP 4
 
+#define PIPE_HALT_TIMEOUT_US	0x4000
+
 static DEFINE_MUTEX(mdss_mdp_sspp_lock);
 static DEFINE_MUTEX(mdss_mdp_smp_lock);
-static DECLARE_BITMAP(mdss_mdp_smp_mmb_pool, MDSS_MDP_SMP_MMB_BLOCKS);
 
 static int mdss_mdp_pipe_free(struct mdss_mdp_pipe *pipe);
-static int __mdss_mdp_pipe_smp_mmb_is_empty(unsigned long *smp);
 
 static inline void mdss_mdp_pipe_write(struct mdss_mdp_pipe *pipe,
 				       u32 reg, u32 val)
@@ -43,21 +44,29 @@ static inline u32 mdss_mdp_pipe_read(struct mdss_mdp_pipe *pipe, u32 reg)
 	return readl_relaxed(pipe->base + reg);
 }
 
-static u32 mdss_mdp_smp_mmb_reserve(unsigned long *existing,
-	unsigned long *reserve, size_t n)
+static u32 mdss_mdp_smp_mmb_reserve(struct mdss_mdp_pipe_smp_map *smp_map,
+	size_t n)
 {
 	u32 i, mmb;
+	u32 fixed_cnt = bitmap_weight(smp_map->fixed, SMP_MB_CNT);
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+
+	if (n <= fixed_cnt)
+		return fixed_cnt;
+	else
+		n -= fixed_cnt;
 
 	/* reserve more blocks if needed, but can't free mmb at this point */
-	for (i = bitmap_weight(existing, SMP_MB_CNT); i < n; i++) {
-		if (bitmap_full(mdss_mdp_smp_mmb_pool, SMP_MB_CNT))
+	for (i = bitmap_weight(smp_map->allocated, SMP_MB_CNT); i < n; i++) {
+		if (bitmap_full(mdata->mmb_alloc_map, SMP_MB_CNT))
 			break;
 
-		mmb = find_first_zero_bit(mdss_mdp_smp_mmb_pool, SMP_MB_CNT);
-		set_bit(mmb, reserve);
-		set_bit(mmb, mdss_mdp_smp_mmb_pool);
+		mmb = find_first_zero_bit(mdata->mmb_alloc_map, SMP_MB_CNT);
+		set_bit(mmb, smp_map->reserved);
+		set_bit(mmb, mdata->mmb_alloc_map);
 	}
-	return i;
+
+	return i + fixed_cnt;
 }
 
 static int mdss_mdp_smp_mmb_set(int client_id, unsigned long *smp)
@@ -86,18 +95,15 @@ static void mdss_mdp_smp_mmb_amend(unsigned long *smp, unsigned long *extra)
 
 static void mdss_mdp_smp_mmb_free(unsigned long *smp, bool write)
 {
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+
 	if (!bitmap_empty(smp, SMP_MB_CNT)) {
 		if (write)
 			mdss_mdp_smp_mmb_set(0, smp);
-		bitmap_andnot(mdss_mdp_smp_mmb_pool, mdss_mdp_smp_mmb_pool,
+		bitmap_andnot(mdata->mmb_alloc_map, mdata->mmb_alloc_map,
 			      smp, SMP_MB_CNT);
 		bitmap_zero(smp, SMP_MB_CNT);
 	}
-}
-
-static int __mdss_mdp_pipe_smp_mmb_is_empty(unsigned long *smp)
-{
-	return bitmap_weight(smp, SMP_MB_CNT) == 0;
 }
 
 u32 mdss_mdp_smp_get_size(struct mdss_mdp_pipe *pipe)
@@ -172,7 +178,7 @@ int mdss_mdp_smp_reserve(struct mdss_mdp_pipe *pipe)
 	struct mdss_mdp_plane_sizes ps;
 	int i;
 	int rc = 0, rot_mode = 0;
-	u32 nlines;
+	u32 nlines, format;
 	u16 width;
 
 	width = pipe->src.w >> pipe->horz_deci;
@@ -184,21 +190,47 @@ int mdss_mdp_smp_reserve(struct mdss_mdp_pipe *pipe)
 			return rc;
 		pr_debug("BWC SMP strides ystride0=%x ystride1=%x\n",
 			ps.ystride[0], ps.ystride[1]);
-	} else if (mdata->has_decimation && pipe->src_fmt->is_yuv) {
-		ps.num_planes = 2;
-		ps.ystride[0] = width;
-		ps.ystride[1] = ps.ystride[0];
 	} else {
-		rc = mdss_mdp_get_plane_sizes(pipe->src_fmt->format,
-			width, pipe->src.h, &ps, 0);
+		format = pipe->src_fmt->format;
+		/*
+		 * when decimation block is present, all chroma planes
+		 * are fetched on a single SMP plane for chroma pixels
+		 */
+		if (mdata->has_decimation) {
+			switch (pipe->src_fmt->chroma_sample) {
+			case MDSS_MDP_CHROMA_H2V1:
+				format = MDP_Y_CRCB_H2V1;
+				break;
+			case MDSS_MDP_CHROMA_420:
+				format = MDP_Y_CBCR_H2V2;
+				break;
+			default:
+				break;
+			}
+		}
+		rc = mdss_mdp_get_plane_sizes(format, width, pipe->src.h,
+			&ps, 0);
 		if (rc)
 			return rc;
 
-		if (pipe->mixer && pipe->mixer->rotator_mode)
+		if (pipe->mixer && pipe->mixer->rotator_mode) {
 			rot_mode = 1;
-		else if (ps.num_planes == 1)
+		} else if (ps.num_planes == 1) {
 			ps.ystride[0] = MAX_BPP *
 				max(pipe->mixer->width, width);
+		} else if (mdata->has_decimation) {
+			/*
+			 * To avoid quailty loss, MDP does one less decimation
+			 * on chroma components if they are subsampled.
+			 * Account for this to have enough SMPs for latency
+			 */
+			switch (pipe->src_fmt->chroma_sample) {
+			case MDSS_MDP_CHROMA_H2V1:
+			case MDSS_MDP_CHROMA_420:
+				ps.ystride[1] <<= 1;
+				break;
+			}
+		}
 	}
 
 	nlines = pipe->bwc_mode ? 1 : 2;
@@ -222,8 +254,8 @@ int mdss_mdp_smp_reserve(struct mdss_mdp_pipe *pipe)
 
 		pr_debug("reserving %d mmb for pnum=%d plane=%d\n",
 				num_blks, pipe->num, i);
-		reserved = mdss_mdp_smp_mmb_reserve(pipe->smp_map[i].allocated,
-			pipe->smp_map[i].reserved, num_blks);
+		reserved = mdss_mdp_smp_mmb_reserve(&pipe->smp_map[i],
+			num_blks);
 		if (reserved < num_blks)
 			break;
 	}
@@ -239,7 +271,21 @@ int mdss_mdp_smp_reserve(struct mdss_mdp_pipe *pipe)
 
 	return rc;
 }
-
+/*
+ * mdss_mdp_smp_alloc() -- set smp mmb and and wm levels for a staged pipe
+ * @pipe: pointer to a pipe
+ *
+ * Function amends reserved smp mmbs to allocated bitmap and ties respective
+ * mmbs to their pipe fetch_ids. Based on the number of total allocated mmbs
+ * for a staged pipe, it also sets the watermark levels (wm).
+ *
+ * This function will be called on every commit where pipe params might not
+ * have changed. In such cases, we need to ensure that wm levels are not
+ * wiped out. Also in some rare situations hw might have reset and wiped out
+ * smp mmb programming but new smp reservation is not done. In such cases we
+ * need to ensure that for a staged pipes, mmbs are set properly based on
+ * allocated bitmap.
+ */
 static int mdss_mdp_smp_alloc(struct mdss_mdp_pipe *pipe)
 {
 	int i;
@@ -247,8 +293,14 @@ static int mdss_mdp_smp_alloc(struct mdss_mdp_pipe *pipe)
 
 	mutex_lock(&mdss_mdp_smp_lock);
 	for (i = 0; i < MAX_PLANES; i++) {
-		if (__mdss_mdp_pipe_smp_mmb_is_empty(pipe->smp_map[i].reserved))
+		cnt += bitmap_weight(pipe->smp_map[i].fixed, SMP_MB_CNT);
+
+		if (bitmap_empty(pipe->smp_map[i].reserved, SMP_MB_CNT)) {
+			cnt += mdss_mdp_smp_mmb_set(pipe->ftch_id + i,
+				pipe->smp_map[i].allocated);
 			continue;
+		}
+
 		mdss_mdp_smp_mmb_amend(pipe->smp_map[i].allocated,
 			pipe->smp_map[i].reserved);
 		cnt += mdss_mdp_smp_mmb_set(pipe->ftch_id + i,
@@ -300,7 +352,7 @@ int mdss_mdp_pipe_map(struct mdss_mdp_pipe *pipe)
 static struct mdss_mdp_pipe *mdss_mdp_pipe_init(struct mdss_mdp_mixer *mixer,
 						u32 type, u32 off)
 {
-	struct mdss_mdp_pipe *pipe;
+	struct mdss_mdp_pipe *pipe = NULL;
 	struct mdss_data_type *mdata;
 	struct mdss_mdp_pipe *pipe_pool = NULL;
 	u32 npipes;
@@ -344,6 +396,13 @@ static struct mdss_mdp_pipe *mdss_mdp_pipe_init(struct mdss_mdp_mixer *mixer,
 			break;
 		}
 		pipe = NULL;
+	}
+
+	if (pipe && mdss_mdp_pipe_fetch_halt(pipe)) {
+		pr_err("%d failed because vbif client is in bad state\n",
+			pipe->num);
+		atomic_dec(&pipe->ref_cnt);
+		return NULL;
 	}
 
 	if (pipe) {
@@ -458,6 +517,64 @@ static int mdss_mdp_pipe_free(struct mdss_mdp_pipe *pipe)
 	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF, false);
 
 	return 0;
+}
+
+/**
+ * mdss_mdp_pipe_fetch_halt() - Halt VBIF client corresponding to specified pipe
+ * @pipe: pointer to the pipe data structure which needs to be halted.
+ *
+ * Check if VBIF client corresponding to specified pipe is idle or not. If not
+ * send a halt request for the client in question and wait for it be idle.
+ *
+ * This function would typically be called after pipe is unstaged or before it
+ * is initialized. On success it should be assumed that pipe is in idle state
+ * and would not fetch any more data. This function cannot be called from
+ * interrupt context.
+ */
+int mdss_mdp_pipe_fetch_halt(struct mdss_mdp_pipe *pipe)
+{
+	bool is_idle;
+	int rc = 0;
+	u32 reg_val, idle_mask, status;
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+
+	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON, false);
+
+	idle_mask = BIT(pipe->xin_id + 16);
+	reg_val = readl_relaxed(mdata->vbif_base + MMSS_VBIF_XIN_HALT_CTRL1);
+
+	is_idle = (reg_val & idle_mask) ? true : false;
+	if (!is_idle) {
+		pr_debug("%pS: pipe%d is not idle. xin_id=%d halt_ctrl1=0x%x\n",
+			__builtin_return_address(0), pipe->num, pipe->xin_id,
+			reg_val);
+
+		mutex_lock(&mdata->reg_lock);
+		reg_val = readl_relaxed(mdata->vbif_base +
+			MMSS_VBIF_XIN_HALT_CTRL0);
+		writel_relaxed(reg_val | BIT(pipe->xin_id),
+			mdata->vbif_base + MMSS_VBIF_XIN_HALT_CTRL0);
+		mutex_unlock(&mdata->reg_lock);
+
+		rc = readl_poll_timeout(mdata->vbif_base +
+			MMSS_VBIF_XIN_HALT_CTRL1, status, (status & idle_mask),
+			1000, PIPE_HALT_TIMEOUT_US);
+		if (rc == -ETIMEDOUT)
+			pr_err("VBIF client %d not halting. TIMEDOUT.\n",
+				pipe->xin_id);
+		else
+			pr_debug("VBIF client %d is halted\n", pipe->xin_id);
+
+		mutex_lock(&mdata->reg_lock);
+		reg_val = readl_relaxed(mdata->vbif_base +
+			MMSS_VBIF_XIN_HALT_CTRL0);
+		writel_relaxed(reg_val & ~BIT(pipe->xin_id),
+			mdata->vbif_base + MMSS_VBIF_XIN_HALT_CTRL0);
+		mutex_unlock(&mdata->reg_lock);
+	}
+	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF, false);
+
+	return rc;
 }
 
 int mdss_mdp_pipe_destroy(struct mdss_mdp_pipe *pipe)
@@ -616,8 +733,8 @@ static int mdss_mdp_format_setup(struct mdss_mdp_pipe *pipe)
 }
 
 int mdss_mdp_pipe_addr_setup(struct mdss_data_type *mdata,
-	struct mdss_mdp_pipe *head, u32 *offsets, u32 *ftch_id, u32 type,
-	u32 num_base, u32 len)
+	struct mdss_mdp_pipe *head, u32 *offsets, u32 *ftch_id, u32 *xin_id,
+	u32 type, u32 num_base, u32 len)
 {
 	u32 i;
 
@@ -629,6 +746,7 @@ int mdss_mdp_pipe_addr_setup(struct mdss_data_type *mdata,
 	for (i = 0; i < len; i++) {
 		head[i].type = type;
 		head[i].ftch_id  = ftch_id[i];
+		head[i].xin_id = xin_id[i];
 		head[i].num = i + num_base;
 		head[i].ndx = BIT(i + num_base);
 		head[i].base = mdata->mdp_base + offsets[i];
@@ -732,7 +850,7 @@ int mdss_mdp_pipe_queue_data(struct mdss_mdp_pipe *pipe,
 			 ((pipe->type == MDSS_MDP_PIPE_TYPE_DMA) &&
 			 (pipe->mixer->type == MDSS_MDP_MIXER_TYPE_WRITEBACK)
 			 && (ctl->mdata->mixer_switched));
-	if (src_data == NULL || !pipe->has_buf) {
+	if (src_data == NULL || (pipe->flags & MDP_SOLID_FILL)) {
 		pipe->params_changed = 0;
 		mdss_mdp_pipe_solidfill_setup(pipe);
 		goto update_nobuf;

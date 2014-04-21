@@ -497,8 +497,6 @@ enum mdss_mdp_pingpong_index {
 #define MDSS_MDP_REG_SMP_ALLOC_W0			0x00180
 #define MDSS_MDP_REG_SMP_ALLOC_R0			0x00230
 
-#define MDSS_MDP_SMP_MMB_BLOCKS			44
-
 #define MDSS_MDP_LP_MISR_SEL			0x450
 #define MDSS_MDP_LP_MISR_CTRL_MDP		0x454
 #define MDSS_MDP_LP_MISR_CTRL_HDMI		0x458
@@ -527,5 +525,9 @@ enum mdss_mdp_pingpong_index {
 #define MDSS_MDP_LP_MISR_SEL_LMIX3_GC		0x0F
 #define MDSS_MDP_LP_MISR_SEL_LMIX4_BLEND	0x10
 #define MDSS_MDP_LP_MISR_SEL_LMIX4_GC		0x11
+
+/* following offsets are with respect to MDP VBIF base */
+#define MMSS_VBIF_XIN_HALT_CTRL0	0x200
+#define MMSS_VBIF_XIN_HALT_CTRL1	0x204
 
 #endif
