@@ -170,8 +170,10 @@ static int mdss_fb_send_panel_event(struct msm_fb_data_type *mfd,
 void mdss_fb_no_update_notify_timer_cb(unsigned long data)
 {
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)data;
-	if (!mfd)
+	if (!mfd) {
 		pr_err("%s mfd NULL\n", __func__);
+		return;
+	}
 	mfd->no_update.value = NOTIFY_TYPE_NO_UPDATE;
 	complete(&mfd->no_update.comp);
 }
@@ -191,7 +193,11 @@ static int mdss_fb_notify_update(struct msm_fb_data_type *mfd,
 	if (notify > NOTIFY_UPDATE_POWER_OFF)
 		return -EINVAL;
 
-	if (notify == NOTIFY_UPDATE_START) {
+	if (mfd->update.is_suspend) {
+		to_user = NOTIFY_TYPE_SUSPEND;
+		mfd->update.is_suspend = 0;
+		ret = 1;
+	} else if (notify == NOTIFY_UPDATE_START) {
 		INIT_COMPLETION(mfd->update.comp);
 		ret = wait_for_completion_interruptible_timeout(
 						&mfd->update.comp, 4 * HZ);
@@ -1056,6 +1062,7 @@ static int mdss_fb_blank_sub(int blank_mode, struct fb_info *info,
 				mfd->panel_power_on = true;
 			mutex_lock(&mfd->update.lock);
 			mfd->update.type = NOTIFY_TYPE_UPDATE;
+			mfd->update.is_suspend = 0;
 			mutex_unlock(&mfd->update.lock);
 		}
 		break;
@@ -1080,7 +1087,9 @@ static int mdss_fb_blank_sub(int blank_mode, struct fb_info *info,
 
 			mutex_lock(&mfd->update.lock);
 			mfd->update.type = NOTIFY_TYPE_SUSPEND;
+			mfd->update.is_suspend = 1;
 			mutex_unlock(&mfd->update.lock);
+			complete(&mfd->update.comp);
 			del_timer(&mfd->no_update.timer);
 			mfd->no_update.value = NOTIFY_TYPE_SUSPEND;
 			complete(&mfd->no_update.comp);
