@@ -433,7 +433,7 @@ static struct socinfo_v1 dummy_socinfo = {
 	.version = 1,
 };
 
-#if 1 //ndef CONFIG_MACH_MSM8974_G2_KDDI
+#ifndef CONFIG_MACH_MSM8974_G2_KDDI
 /*LGE_CHANGE_S, hyeongjin.kim@lge.com, 2013-03-29, HiddenMenu SMPL Counter */
 /*LGE_UPDATE_S, jongbum.kim, 20111024 -->[*/
 u16 *poweron_st = 0;

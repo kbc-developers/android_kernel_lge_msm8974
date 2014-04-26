@@ -3235,6 +3235,12 @@ qpnp_chg_hwinit(struct qpnp_chg_chip *chip, u8 subtype,
 			pr_debug("failed to force on VREF_BAT_THM rc=%d\n", rc);
 			return rc;
 		}
+		/*disable BATFET Ultra LPM */
+		rc = qpnp_chg_masked_write(chip,0x12DF, 0xC0, 0x00, 1);
+		if (rc) {
+			pr_debug("failed to disable BATFET Ultra LPM rc=%d\n", rc);
+			return rc;
+		}
 		break;
 	case SMBB_USB_CHGPTH_SUBTYPE:
 	case SMBBP_USB_CHGPTH_SUBTYPE:
