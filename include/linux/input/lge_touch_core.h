@@ -51,6 +51,9 @@
 lcd_maker_id get_panel_maker_id(void);
 #define MINIMUM_PEAK_AMPLITUDE_REG    0x15
 #endif
+#if defined(A1_only) && !defined(CONFIG_MACH_MSM8974_G2_KDDI) && !defined(CONFIG_MACH_MSM8974_G2_OPEN_COM)
+#define DRUMMING_THRESH_N_DISTANCE_REG  0x15
+#endif
 
 struct touch_device_caps
 {
@@ -320,9 +323,13 @@ struct lge_touch_data
 	struct delayed_work			work_touch_lock;
 	struct work_struct  		work_fw_upgrade;
 #ifdef CUST_G2_TOUCH
+	struct mutex			irq_work_mutex;
 	struct delayed_work			work_f54;
 	struct delayed_work			work_gesture_wakeup;
 	struct delayed_work			work_thermal;
+#endif
+#if defined(A1_only) && !defined(CONFIG_MACH_MSM8974_G2_KDDI) && !defined(CONFIG_MACH_MSM8974_G2_OPEN_COM)
+	struct delayed_work			work_ime_drumming;
 #endif
 #if defined(CONFIG_FB)
 	struct notifier_block fb_notif;
@@ -455,6 +462,13 @@ enum{
 	INCOMIMG_CALL_RESERVED,
 	INCOMIMG_CALL_TOUCH,
 };
+
+#if defined(A1_only) && !defined(CONFIG_MACH_MSM8974_G2_KDDI) && !defined(CONFIG_MACH_MSM8974_G2_OPEN_COM)
+enum{
+	IME_OFF,
+	IME_ON,
+};
+#endif
 
 enum{
 	GHOST_NONE			= 0,

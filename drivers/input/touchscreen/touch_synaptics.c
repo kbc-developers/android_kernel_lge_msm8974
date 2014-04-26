@@ -209,6 +209,13 @@
 
 #ifdef CUST_G2_TOUCH
 extern int ts_charger_plug;
+#if defined(A1_only) && !defined(CONFIG_MACH_MSM8974_G2_KDDI) && !defined(CONFIG_MACH_MSM8974_G2_OPEN_COM)
+extern int ime_drumming_status;
+extern int keyguard_status;
+#endif
+#if defined(CONFIG_LGE_Z_TOUCHSCREEN)
+extern int get_touch_ts_fw_version(char *);
+#endif
 #define OLD_S3404A_BOOT_ID	1245782
 #define S3404A_BOOT_ID 	1328275
 #define S3404B_BOOT_ID 	1380018
@@ -1101,8 +1108,11 @@ int synaptics_ts_init(struct i2c_client* client, struct touch_fw_info* fw_info)
 			(struct synaptics_ts_data *)get_touch_handle(client);
 
 	u8 buf = 0;
-#if defined(A1_only)
-	u8 min_peak[2] = {0};
+#if defined(A1_only) && !defined(CONFIG_MACH_MSM8974_G2_KDDI) && !defined(CONFIG_MACH_MSM8974_G2_OPEN_COM)
+	u8 min_peak[5] = {0};
+#endif
+#if defined(CONFIG_LGE_VU3_TOUCHSCREEN)
+	unsigned char *r_mem = NULL;
 #endif
 
 	if (touch_debug_mask & DEBUG_TRACE)
@@ -1120,38 +1130,102 @@ int synaptics_ts_init(struct i2c_client* client, struct touch_fw_info* fw_info)
 				TOUCH_ERR_MSG("DEVICE_CONTROL_REG write fail\n");
 				return -EIO;
 			}
+#if defined(A1_only) && !defined(CONFIG_MACH_MSM8974_G2_KDDI) && !defined(CONFIG_MACH_MSM8974_G2_OPEN_COM)
+			if((keyguard_status == 9) && ime_drumming_status) {
+				switch(fw_info->fw_setting.curr_touch_vendor) {
+					case TOUCH_VENDOR_TPK:
+						min_peak[0] = 0x0d;
+						if(thermal_status) {
+							min_peak[1] = 0x3c;
+						} else {
+							min_peak[1] = 0x0f;
+						}
+						break;
+					case TOUCH_VENDOR_LGIT:
+						min_peak[0] = 0x0d;
+						if(thermal_status) {
+							min_peak[1] = 0x28;
+						} else {
+							min_peak[1] = 0x0f;
+						}
+						break;
+					default :
+						break;
+				}
+				min_peak[2] = 0xc0;
+				min_peak[3] = 0x08;
+				min_peak[4] = 0x01;
+
+				if(touch_i2c_write(ts->client, DRUMMING_THRESH_N_DISTANCE_REG, 5, min_peak) < 0) {
+					TOUCH_ERR_MSG("%s : Touch i2c write fail !! \n", __func__);
+				} else {
+					TOUCH_INFO_MSG("%s : Peak Merge Threshold            : 192\n", __func__);
+					TOUCH_INFO_MSG("%s : Drumming Acceleration Threshold : 1\n", __func__);
+					TOUCH_INFO_MSG("%s : Min Drumming Distance           : 1\n", __func__);
+				}
+			}
+#endif
 		} else if(ts_charger_plug==1){
 			if (unlikely(touch_i2c_write_byte(client, DEVICE_CONTROL_REG,
 					DEVICE_CONTROL_NORMAL_OP | DEVICE_CONTROL_CONFIGURED | DEVICE_CHARGER_CONNECTED) < 0)) {
 				TOUCH_ERR_MSG("DEVICE_CONTROL_REG write fail\n");
 				return -EIO;
 			}
-#if defined(A1_only)
-			switch(fw_info->fw_setting.curr_touch_vendor) {
-				case TOUCH_VENDOR_TPK:
-					min_peak[0] = 0x0d;
-					min_peak[1] = 0x50;
+#if defined(A1_only) && !defined(CONFIG_MACH_MSM8974_G2_KDDI) && !defined(CONFIG_MACH_MSM8974_G2_OPEN_COM)
+			if((keyguard_status == 9) && ime_drumming_status) {
+				switch(fw_info->fw_setting.curr_touch_vendor) {
+					case TOUCH_VENDOR_TPK:
+						min_peak[0] = 0x0d;
+						min_peak[1] = 0x3c;
+						break;
 
-					if(thermal_status == 0){
-						if (touch_i2c_write(client, MINIMUM_PEAK_AMPLITUDE_REG, sizeof(min_peak), min_peak) < 0){
-							TOUCH_ERR_MSG("%s : Touch i2c write fail !! \n", __func__);
-						} else
-							TOUCH_INFO_MSG("%s : TPK set min peak 80 \n", __func__);
-					}
-					break;
-				case TOUCH_VENDOR_LGIT:
-					min_peak[0] = 0x0c;
-					min_peak[1] = 0x28;
+					case TOUCH_VENDOR_LGIT:
+						min_peak[0] = 0x0d;
+						min_peak[1] = 0x28;
+						break;
 
-					if(thermal_status == 0){
-						if (touch_i2c_write(client, MINIMUM_PEAK_AMPLITUDE_REG, sizeof(min_peak), min_peak) < 0){
-							TOUCH_ERR_MSG("%s : Touch i2c write fail !! \n", __func__);
-						} else
-							TOUCH_INFO_MSG("%s : LGIT set min peak 40 \n", __func__);
-					}
-					break;
-				default:
-					break;
+					default :
+						break;
+				}
+
+				min_peak[2] = 0xc0;
+				min_peak[3] = 0x08;
+				min_peak[4] = 0x01;
+
+				if(touch_i2c_write(ts->client, DRUMMING_THRESH_N_DISTANCE_REG, 5, min_peak) < 0) {
+					TOUCH_ERR_MSG("%s : Touch i2c write fail !! \n", __func__);
+				} else {
+					TOUCH_INFO_MSG("%s : Peak Merge Threshold            : 192\n", __func__);
+					TOUCH_INFO_MSG("%s : Drumming Acceleration Threshold : 1\n", __func__);
+					TOUCH_INFO_MSG("%s : Min Drumming Distance           : 1\n", __func__);
+				}
+			} else {
+				switch(fw_info->fw_setting.curr_touch_vendor) {
+					case TOUCH_VENDOR_TPK:
+						min_peak[0] = 0x0d;
+						min_peak[1] = 0x3c;
+
+						if(thermal_status == 0){
+							if (touch_i2c_write(client, MINIMUM_PEAK_AMPLITUDE_REG, 2, min_peak) < 0){
+								TOUCH_ERR_MSG("%s : Touch i2c write fail !! \n", __func__);
+							} else
+								TOUCH_INFO_MSG("%s : TPK set min peak 60 \n", __func__);
+						}
+						break;
+					case TOUCH_VENDOR_LGIT:
+						min_peak[0] = 0x0d;
+						min_peak[1] = 0x28;
+
+						if(thermal_status == 0){
+							if (touch_i2c_write(client, MINIMUM_PEAK_AMPLITUDE_REG, 2, min_peak) < 0){
+								TOUCH_ERR_MSG("%s : Touch i2c write fail !! \n", __func__);
+							} else
+								TOUCH_INFO_MSG("%s : LGIT set min peak 40 \n", __func__);
+						}
+						break;
+					default:
+						break;
+				}
 			}
 #endif
 
@@ -1162,6 +1236,41 @@ int synaptics_ts_init(struct i2c_client* client, struct touch_fw_info* fw_info)
 			TOUCH_ERR_MSG("DEVICE_CONTROL_REG write fail\n");
 			return -EIO;
 		}
+#if defined(A1_only) && !defined(CONFIG_MACH_MSM8974_G2_KDDI) && !defined(CONFIG_MACH_MSM8974_G2_OPEN_COM)
+		if((keyguard_status == 9) && ime_drumming_status) {
+			switch(fw_info->fw_setting.curr_touch_vendor) {
+				case TOUCH_VENDOR_TPK:
+					min_peak[0] = 0x0d;
+					if(thermal_status) {
+						min_peak[1] = 0x3c;
+					} else {
+						min_peak[1] = 0x0f;
+					}
+					break;
+				case TOUCH_VENDOR_LGIT:
+					min_peak[0] = 0x0d;
+					if(thermal_status) {
+						min_peak[1] = 0x28;
+					} else {
+						min_peak[1] = 0x0f;
+					}
+					break;
+				default :
+					break;
+			}
+			min_peak[2] = 0xc0;
+			min_peak[3] = 0x08;
+			min_peak[4] = 0x01;
+
+			if(touch_i2c_write(ts->client, DRUMMING_THRESH_N_DISTANCE_REG, 5, min_peak) < 0) {
+				TOUCH_ERR_MSG("%s : Touch i2c write fail !! \n", __func__);
+			} else {
+				TOUCH_INFO_MSG("%s : Peak Merge Threshold            : 192\n", __func__);
+				TOUCH_INFO_MSG("%s : Drumming Acceleration Threshold : 1\n", __func__);
+				TOUCH_INFO_MSG("%s : Min Drumming Distance           : 1\n", __func__);
+			}
+		}
+#endif
 	}
 
 	if (unlikely(touch_i2c_read(client, INTERRUPT_ENABLE_REG,

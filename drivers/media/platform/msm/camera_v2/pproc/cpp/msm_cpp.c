@@ -30,6 +30,7 @@
 #include <linux/kernel.h>
 #include <linux/workqueue.h>
 //#include <linux/debugfs.h>
+#include <mach/clk.h> /*QCT_PATCH, fix the H/W reset on loading cpp, 2013-09-11, freeso.kim@lge.com */
 #endif
 /* LGE_CHANGE_E, add the dual isp patch code from QCT, 2013.6.20, youngil.yun[End] */
 #include <mach/iommu_domains.h>
@@ -645,7 +646,11 @@ static int cpp_init_hardware(struct cpp_device *cpp_dev)
 		pr_err("%s: Bandwidth registration Failed!\n", __func__);
 		goto bus_scale_register_failed;
 	}
+/*QCT_PATCH S, fix lockup when start camera with 13M resolution, 2013-10-31, yt.kim@lge.com */
+#if 0
 	msm_isp_update_bandwidth(ISP_CPP, 981345600, 1066680000);
+#endif
+/*QCT_PATCH E, fix lockup when start camera with 13M resolution, 2013-10-31, yt.kim@lge.com */
 
 	if (cpp_dev->fs_cpp == NULL) {
 		cpp_dev->fs_cpp =
@@ -662,6 +667,38 @@ static int cpp_init_hardware(struct cpp_device *cpp_dev)
 			goto fs_failed;
 		}
 	}
+
+/*QCT_PATCH S, fix the H/W reset on loading cpp, 2013-09-11, freeso.kim@lge.com */
+	 cpp_dev->cpp_clk[7] = clk_get(&cpp_dev->pdev->dev, 
+	 cpp_clk_info[7].clk_name); 
+
+	 if (IS_ERR(cpp_dev->cpp_clk[7])) { 
+		 pr_err("%s get failed\n", cpp_clk_info[7].clk_name); 
+		 rc = PTR_ERR(cpp_dev->cpp_clk[7]); 
+		 goto remap_failed; 
+	 } 
+	 
+	 rc = clk_reset(cpp_dev->cpp_clk[7], CLK_RESET_ASSERT); 
+	 
+	 if (rc) { 
+		 pr_err("%s:micro_iface_clk assert failed\n", __func__); 
+		 clk_put(cpp_dev->cpp_clk[7]); 
+		 goto remap_failed; 
+	 } 
+	 
+	 usleep_range(10000, 12000); 
+	 
+	 rc = clk_reset(cpp_dev->cpp_clk[7], CLK_RESET_DEASSERT); 
+	 if (rc) { 
+		 pr_err("%s:micro_iface_clk assert failed\n", __func__); 
+		 clk_put(cpp_dev->cpp_clk[7]); 
+		 goto remap_failed; 
+	 } 
+	 
+	 usleep_range(1000, 1200); 
+	 
+	 clk_put(cpp_dev->cpp_clk[7]); 
+/*QCT_PATCH E, fix the H/W reset on loading cpp, 2013-09-11, freeso.kim@lge.com */
 
 	rc = msm_cam_clk_enable(&cpp_dev->pdev->dev, cpp_clk_info,
 			cpp_dev->cpp_clk, ARRAY_SIZE(cpp_clk_info), 1);
@@ -715,6 +752,10 @@ static int cpp_init_hardware(struct cpp_device *cpp_dev)
 	cpp_dev->taskletq_idx = 0;
 	atomic_set(&cpp_dev->irq_cnt, 0);
 	msm_cpp_create_buff_queue(cpp_dev, MSM_CPP_MAX_BUFF_QUEUE);
+/*QCT_PATCH S, fix lockup when start camera with 13M resolution, 2013-10-31, yt.kim@lge.com */
+	pr_err("stream_cnt:%d\n", cpp_dev->stream_cnt);
+	cpp_dev->stream_cnt = 0;
+/*QCT_PATCH E, fix lockup when start camera with 13M resolution, 2013-10-31, yt.kim@lge.com */	
 /* LGE_CHANGE_S, add the dual isp patch code from QCT, 2013.6.20, youngil.yun[Start] */
 #ifdef CONFIG_USE_DUAL_ISP
 	if (cpp_dev->is_firmware_loaded == 1) {
@@ -746,7 +787,11 @@ clk_failed:
 	regulator_disable(cpp_dev->fs_cpp);
 	regulator_put(cpp_dev->fs_cpp);
 fs_failed:
+/*QCT_PATCH S, fix lockup when start camera with 13M resolution, 2013-10-31, yt.kim@lge.com */
+#if 0
 	msm_isp_update_bandwidth(ISP_CPP, 0, 0);
+#endif
+/*QCT_PATCH S, fix lockup when start camera with 13M resolution, 2013-10-31, yt.kim@lge.com */
 	msm_isp_deinit_bandwidth_mgr(ISP_CPP);
 bus_scale_register_failed:
 	return rc;
@@ -770,7 +815,14 @@ static void cpp_release_hardware(struct cpp_device *cpp_dev)
 		regulator_put(cpp_dev->fs_cpp);
 		cpp_dev->fs_cpp = NULL;
 	}
+/*QCT_PATCH S, fix lockup when start camera with 13M resolution, 2013-10-31, yt.kim@lge.com */
+#if 0
 	msm_isp_update_bandwidth(ISP_CPP, 0, 0);
+#endif
+	if (cpp_dev->stream_cnt > 0) 
+	pr_err("error: stream count active\n"); 
+	cpp_dev->stream_cnt = 0; 
+/*QCT_PATCH S, fix lockup when start camera with 13M resolution, 2013-10-31, yt.kim@lge.com */	
 	msm_isp_deinit_bandwidth_mgr(ISP_CPP);
 }
 
@@ -1581,6 +1633,19 @@ long msm_cpp_subdev_ioctl(struct v4l2_subdev *sd,
 
 		kfree(k_stream_buff_info.buffer_info);
 		kfree(u_stream_buff_info);
+/*QCT_PATCH S, fix lockup when start camera with 13M resolution, 2013-10-31, yt.kim@lge.com */		
+		if (cpp_dev->stream_cnt == 0) {
+			rc = msm_isp_update_bandwidth(ISP_CPP, 981345600, 1066680000);
+			if (rc < 0) {
+				pr_err("Bandwidth Set Failed!\n");
+				msm_isp_update_bandwidth(ISP_CPP, 0, 0);
+				mutex_unlock(&cpp_dev->mutex);
+				return -EINVAL;
+			}
+		}
+		cpp_dev->stream_cnt++;
+		pr_err("stream_cnt:%d\n", cpp_dev->stream_cnt);
+/*QCT_PATCH E, fix lockup when start camera with 13M resolution, 2013-10-31, yt.kim@lge.com */		
 		break;
 	}
 	case VIDIOC_MSM_CPP_DEQUEUE_STREAM_BUFF_INFO: {
@@ -1609,6 +1674,19 @@ long msm_cpp_subdev_ioctl(struct v4l2_subdev *sd,
 		rc = msm_cpp_free_buff_queue_entry(cpp_dev,
 			buff_queue_info->session_id,
 			buff_queue_info->stream_id);
+/*QCT_PATCH S, fix lockup when start camera with 13M resolution, 2013-10-31, yt.kim@lge.com */		
+		if (cpp_dev->stream_cnt > 0) {
+			cpp_dev->stream_cnt--;
+			pr_err("stream_cnt:%d\n", cpp_dev->stream_cnt);
+			if (cpp_dev->stream_cnt == 0) {
+				rc = msm_isp_update_bandwidth(ISP_CPP, 0, 0);
+				if (rc < 0)
+					pr_err("Bandwidth Reset Failed!\n");
+			}
+		} else {
+			pr_err("error: stream count underflow %d\n", cpp_dev->stream_cnt);
+		}
+/*QCT_PATCH E, fix lockup when start camera with 13M resolution, 2013-10-31, yt.kim@lge.com */		
 		break;
 	}
 	case VIDIOC_MSM_CPP_GET_EVENTPAYLOAD: {

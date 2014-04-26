@@ -3195,8 +3195,13 @@ void make_blink_led_pattern(int rgb, int delay_on, int delay_off)
 	printk("[RGB LED] rgb_devider = %d\n", rgb_devider);
 
 	if (rgb_devider) {
+#if defined(CONFIG_MACH_MSM8974_G2_DCM)
+		blink_pattern[0] = (((rgb >> 16) & 0xFF)*2)/rgb_devider;
+		blink_pattern[2] = ((((rgb >> 8) & 0xFF)*2)*6/10)/rgb_devider;
+#else
 		blink_pattern[0] = ((((rgb >> 16) & 0xFF)*2)*7/10)/rgb_devider;
 		blink_pattern[2] = (((rgb >> 8) & 0xFF)*2)/rgb_devider;
+#endif
 		blink_pattern[4] = (rgb & 0xFF)/rgb_devider;
 	}
 
@@ -3251,9 +3256,14 @@ void make_onoff_led_pattern(int rgb)
 	     PM8921 can use 512 resolution
 	     R : (rgb*1.4)/3     G : (rgb*2)/3     B : rgb/3
 	*/
+#if defined(CONFIG_MACH_MSM8974_G2_DCM)
+	onoff_pattern[0] = (((rgb >> 16) & 0xFF)*2)/3;
+	onoff_pattern[2] = (((rgb >> 8) & 0xFF)*2*6/10)/3;
+#else
 	onoff_pattern[0] = (((rgb >> 16) & 0xFF)*2*7/10)/3;
-	onoff_pattern[1] = onoff_pattern[0];
 	onoff_pattern[2] = (((rgb >> 8) & 0xFF)*2)/3;
+#endif
+	onoff_pattern[1] = onoff_pattern[0];
 	onoff_pattern[3] = onoff_pattern[2];
 	onoff_pattern[4] = (rgb & 0xFF)/3;
 	onoff_pattern[5] = onoff_pattern[4];

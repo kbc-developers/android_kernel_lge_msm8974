@@ -181,7 +181,9 @@ struct cpp_device {
 	struct msm_cpp_work_t *work;
 #endif
 /* LGE_CHANGE_E, add the dual isp patch code from QCT, 2013.6.20, youngil.yun[End] */
-
+/*QCT_PATCH S, fix lockup when start camera with 13M resolution, 2013-10-31, yt.kim@lge.com */
+	uint8_t stream_cnt;
+/*QCT_PATCH E, fix lockup when start camera with 13M resolution, 2013-10-31, yt.kim@lge.com */
 	int domain_num;
 	struct iommu_domain *domain;
 	struct device *iommu_ctx;
