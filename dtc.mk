@@ -25,6 +25,7 @@ DTC = $(KERNEL_OUT)/scripts/dtc/dtc
 define append-dtb
 mkdir -p $(KERNEL_OUT)/arch/arm/boot;\
 $(foreach DTS_NAME, $(DTS_NAMES), \
+   echo "aaa/ $DTS_NAME" \
    $(foreach d, $(DTS_FILES), \
       $(DTC) -p 1024 -O dtb -o $(call DTB_FILE,$(d)) $(d); \
       cat $(KERNEL_ZIMG) $(call DTB_FILE,$(d)) > $(call ZIMG_FILE,$(d));))
