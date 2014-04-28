@@ -18,6 +18,22 @@ check_and_get_linaro()
 
     echo $TOOLCHAIN_DIR/gcc-linaro-$COMPILER_ARCH-$TOOLCHAIN_VER-$COMPILER_VER-$COMPILER_REV/bin/$COMPILER_ARCH-
 }
+# url: https://launchpad.net/linaro-toolchain-binaries/trunk/
+check_and_get_linaro_new()
+{
+    COMPILER_ARCH=$1
+    TOOLCHAIN_VER=$2
+    COMPILER_VER=$3
+
+	BASE_NAME=gcc-linaro-$COMPILER_ARCH-$TOOLCHAIN_VER-${COMPILER_VER}_linux
+    if [ ! -d $TOOLCHAIN_DIR/$BASE_NAME/$COMPILER_ARCH ]; then
+        wget --no-check-certificate https://launchpad.net/linaro-toolchain-binaries/trunk/$COMPILER_VER/+download/$BASE_NAME.tar.bz2
+        sudo mkdir -p $TOOLCHAIN_DIR
+        sudo tar jxvf $BASE_NAME.tar.bz2 -C $TOOLCHAIN_DIR
+        #rm gcc-linaro-$COMPILER_ARCH-$TOOLCHAIN_VER-$COMPILER_VER-$COMPILER_REV.tar.bz2
+    fi
+    echo $TOOLCHAIN_DIR/$BASE_NAME/bin/$COMPILER_ARCH-
+}
 
 # aosp compiler
 check_and_get_aosp_prebuild()
@@ -36,10 +52,11 @@ check_and_get_aosp_prebuild()
 }
 
 # use linaro compiler
-#export BUILD_CROSS_COMPILE=`check_and_get_linaro arm-linux-gnueabihf 4.7 2013.04 20130415`
+export BUILD_CROSS_COMPILE=`check_and_get_linaro arm-linux-gnueabihf 4.7 2013.04 20130415`
+#export BUILD_CROSS_COMPILE=`check_and_get_linaro_new arm-linux-gnueabihf 4.8 2013.06`
 
 # use aosp pulibuild
-export BUILD_CROSS_COMPILE=`check_and_get_aosp_prebuild arm-eabi 4.6`
+#export BUILD_CROSS_COMPILE=`check_and_get_aosp_prebuild arm-eabi 4.6`
 
 # export compiler option
 #export USE_CFLAGS_OPTION=y
