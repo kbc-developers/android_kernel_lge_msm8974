@@ -102,6 +102,10 @@ static u32 mdss_fb_pseudo_palette[16] = {
 	0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
 	0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff
 };
+#if defined(CONFIG_MACH_MSM8974_G2_DCM)
+#undef CONFIG_MACH_MSM8974_G2_DCM
+#endif
+
 #if defined(CONFIG_MACH_LGE) && defined(CONFIG_FB_MSM_LOGO)
 #define INIT_HD_IMAGE_FILE "/initlogo_hd.rle"
 #define INIT_FHD_IMAGE_FILE "/initlogo_fhd.rle"
