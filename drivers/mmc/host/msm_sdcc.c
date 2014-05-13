@@ -4361,26 +4361,11 @@ retry:
 		msmsdcc_dump_sdcc_state(host);
 		rc = -EAGAIN;
 
-		/* LGE_CHANGE_S, [WiFi][hayun.kim@lge.com], 2013-03-12, testcode for sd error debugging */
-		#if defined(CONFIG_BCMDHD) || defined (CONFIG_BCMDHD_MODULE)
-		{
-			extern int lge_get_board_revno(void);
-			int bcmdhd_id = 2; // sdcc 2
-			#if defined(CONFIG_MACH_MSM8974_G2_KR) 
-			if (3 /*HW_REV_B*/ < lge_get_board_revno()) {
-			bcmdhd_id = 3; //sdcc 3
-			}
-			#elif defined(CONFIG_MACH_MSM8974_VU3_KR) || defined(CONFIG_MACH_MSM8974_G2_KDDI)
-			bcmdhd_id = 3; //sdcc 3
-			#endif						
-			if( host->pdev->id == bcmdhd_id )
-			{
-			    rc = 0;
-			    //panic("Failed to tune.\n"); // please contact hayun.kim@lge.com
-			}
+#if defined(CONFIG_WIFI_CONTROL_FUNC)
+		if (host->plat->wifi_control_func) {
+			rc = 0;
 		}
-		#endif
-		/* LGE_CHANGE_S, [WiFi][hayun.kim@lge.com], 2013-03-12, testcode for sd error debugging */
+#endif
 	}
 
 kfree:
@@ -5876,9 +5861,15 @@ static struct mmc_platform_data *msmsdcc_populate_pdata(struct device *dev)
 		goto err;
 	}
 
-	if (msmsdcc_dt_parse_vreg_info(dev,
-			&pdata->vreg_data->vdd_data, "vdd"))
-		goto err;
+	/*
+	 * Some devices might not use vdd. if qcom,not-use-vdd exists
+	 * skip the parse the vdd
+	 */
+	if (of_property_read_bool(np, "qcom,not-use-vdd") != true) {
+		if (msmsdcc_dt_parse_vreg_info(dev,
+				&pdata->vreg_data->vdd_data, "vdd"))
+			goto err;
+	}
 
 	if (msmsdcc_dt_parse_vreg_info(dev,
 			&pdata->vreg_data->vdd_io_data, "vdd-io"))
