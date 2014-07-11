@@ -1,6 +1,6 @@
-assert(getprop("ro.product.device") == "lgl22" || getprop("ro.build.product") == "lgl22" || 
+assert(getprop("ro.product.device") == "l01f" || getprop("ro.build.product") == "l01f" || 
        getprop("ro.product.device") == "g2" || getprop("ro.build.product") == "g2" || 
-       getprop("ro.product.device") == "galbi" || getprop("ro.build.product") == "galbi" || abort("This package is for \"lgl22,g2,galbi\" devices; this is a \"" + getprop("ro.product.device") + "\"."););
+       getprop("ro.product.device") == "galbi" || getprop("ro.build.product") == "galbi" || abort("This package is for \"l01f,g2,galbi\" devices; this is a \"" + getprop("ro.product.device") + "\"."););
 ui_print("");
 ui_print("");
 ui_print("------------------------------------------------");
@@ -17,8 +17,8 @@ ui_print("------------------------------------------------");
 ui_print("");
 show_progress(0.500000, 0);
 
-ui_print("flashing @image image...");
-package_extract_file("@image.img", "/tmp/@image.img");
+ui_print("flashing boot image...");
+package_extract_file("boot.img", "/tmp/boot.img");
 
 run_program("/mkdir","/tmp/loki");
 package_extract_dir("loki", "/tmp/loki");
@@ -27,7 +27,7 @@ set_perm(0, 0, 0777, "/tmp/loki/loki_patch");
 set_perm(0, 0, 0777, "/tmp/loki/loki.sh");
 
 show_progress(0.700000, 0);
-assert(run_program("/tmp/loki/loki.sh","@image") == 0);
+assert(run_program("/tmp/loki/loki.sh","boot") == 0);
 
 show_progress(0.100000, 0);
 
