@@ -10,12 +10,15 @@ ui_print("    Scotty");
 ui_print("    HomuHomu");
 ui_print("    ma34s");
 ui_print("    sakuramilk");
+ui_print("    lawn");
+ui_print("    sakuraba001");
+ui_print("    blackzigong");
 ui_print("------------------------------------------------");
 ui_print("");
 show_progress(0.500000, 0);
 
-ui_print("flashing @IMAGE image...");
-package_extract_file("@IMAGE.img", "/tmp/@IMAGE.img");
+ui_print("flashing @image image...");
+package_extract_file("@image.img", "/tmp/@image.img");
 
 run_program("/mkdir","/tmp/loki");
 package_extract_dir("loki", "/tmp/loki");
@@ -24,10 +27,9 @@ set_perm(0, 0, 0777, "/tmp/loki/loki_patch");
 set_perm(0, 0, 0777, "/tmp/loki/loki.sh");
 
 show_progress(0.700000, 0);
-assert(run_program("/tmp/loki/loki.sh","@IMAGE") == 0);
+assert(run_program("/tmp/loki/loki.sh","@image") == 0);
 
 show_progress(0.100000, 0);
 
 ui_print("flash complete. Enjoy!");
 set_progress(1.000000);
-
